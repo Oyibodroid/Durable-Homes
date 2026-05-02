@@ -39,7 +39,7 @@ const statusConfig: Record<
 export default async function AccountOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string }>
+  searchParams: { page?: string; status?: string }
 }) {
   const session = await auth()
 
@@ -47,7 +47,7 @@ export default async function AccountOrdersPage({
     redirect('/auth/signin')
   }
 
-  const { page: pageParam, status: statusParam } = await searchParams
+  const { page: pageParam, status: statusParam } = searchParams
   const page = Number(pageParam) || 1
   const limit = 10
   const skip = (page - 1) * limit
