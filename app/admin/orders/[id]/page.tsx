@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/Button'
 import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Printer, Mail } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 import { PrintButton } from '@/components/admin/PrintButton'
+import { OrderStatus } from '@prisma/client'
 
 async function updateOrderStatus(formData: FormData) {
   'use server'
 
   const orderId = formData.get('orderId') as string
-  const status = formData.get('status') as OrderStatus // ✅ now correct
+  const status = formData.get('status') as OrderStatus 
 
   try {
     await prisma.order.update({
