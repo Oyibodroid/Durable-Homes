@@ -9,7 +9,7 @@ import Link from 'next/link'
 export default async function SalesReportsPage({
   searchParams,
 }: {
-  searchParams: { period?: string; from?: string; to?: string }
+  searchParams: Promise<{ period?: string; from?: string; to?: string }>   // ✅ Promise
 }) {
   const session = await auth()
 
@@ -17,7 +17,8 @@ export default async function SalesReportsPage({
     redirect('/auth/signin')
   }
 
-  const period = searchParams.period || 'month'
+  const params = await searchParams                              // ✅ await here
+  const period = params.period || 'month'
   
   // Calculate date range based on period
   const now = new Date()
@@ -31,11 +32,11 @@ export default async function SalesReportsPage({
     startDate.setMonth(now.getMonth() - 1)
   } else if (period === 'year') {
     startDate.setFullYear(now.getFullYear() - 1)
-  } else if (period === 'custom' && searchParams.from && searchParams.to) {
-    startDate = new Date(searchParams.from)
+  } else if (period === 'custom' && params.from && params.to) {   // ✅ use params.from / params.to
+    startDate = new Date(params.from)
   }
 
-  const endDate = searchParams.to ? new Date(searchParams.to) : now
+  const endDate = params.to ? new Date(params.to) : now
 
   const [totalRevenue, orderCount, averageOrderValue, dailyStats] = await Promise.all([
     prisma.order.aggregate({
