@@ -12,7 +12,7 @@ const reviewSchema = z.object({
 // ✅ GET product reviews eligibility
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -21,7 +21,7 @@ export async function GET(
       return NextResponse.json({ eligible: false, reason: 'not_logged_in' })
     }
 
-    const productId = params.id
+    const productId = (await params).id
 
     const purchase = await prisma.orderItem.findFirst({
       where: {
@@ -67,7 +67,7 @@ export async function GET(
 // ✅ POST create review
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth()
@@ -79,7 +79,7 @@ export async function POST(
     const body = await request.json()
     const { rating, title, content } = reviewSchema.parse(body)
 
-    const productId = params.id
+    const productId = (await params).id
 
     const purchase = await prisma.orderItem.findFirst({
       where: {

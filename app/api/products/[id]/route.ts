@@ -20,10 +20,10 @@ const productSchema = z.object({
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    const { id } = await params // Unwrap the Promise
     
     const product = await prisma.product.findUnique({
       where: { id },
@@ -55,7 +55,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
 
@@ -67,7 +67,7 @@ export async function PUT(
   }
 
   try {
-    const { id } = await params 
+    const { id } = await params // Unwrap the Promise
     const json = await request.json()
     const body = productSchema.parse(json)
 
@@ -127,7 +127,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
 
@@ -139,7 +139,7 @@ export async function DELETE(
   }
 
   try {
-    const { id } = await params
+    const { id } = await params // Unwrap the Promise
     
     await prisma.product.delete({
       where: { id },

@@ -13,11 +13,11 @@ const userSchema = z.object({
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
 
-  if (!session || (session.user.role !== 'ADMIN' && session.user.id !== params.id)) {
+  if (!session || (session.user.role !== 'ADMIN' && session.user.id !== (await params).id)) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -26,7 +26,7 @@ export async function GET(
 
   try {
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
       include: {
         addresses: true,
         orders: {
@@ -68,11 +68,11 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }>}
 ) {
   const session = await auth()
 
-  if (!session || (session.user.role !== 'ADMIN' && session.user.id !== params.id)) {
+  if (!session || (session.user.role !== 'ADMIN' && session.user.id !== (await params).id)) {
     return NextResponse.json(
       { error: 'Unauthorized' },
       { status: 401 }
@@ -92,7 +92,7 @@ export async function PUT(
     }
 
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: body,
     })
 
@@ -116,7 +116,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
 
@@ -128,7 +128,7 @@ export async function DELETE(
   }
 
   // Prevent deleting yourself
-  if (session.user.id === params.id) {
+  if (session.user.id === (await params).id) {
     return NextResponse.json(
       { error: 'Cannot delete your own account' },
       { status: 400 }
@@ -137,7 +137,7 @@ export async function DELETE(
 
   try {
     await prisma.user.delete({
-      where: { id: params.id },
+      where: { id: (await params).id },
     })
 
     return NextResponse.json({ success: true })
