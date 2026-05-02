@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     let result;
     switch (provider) {
       case 'paystack':
-        result = await verifyPaystackWebhook(body, paystackSignature!);
+        result = await verifyPaystackWebhook(body);
         break;
         
       case 'flutterwave':
