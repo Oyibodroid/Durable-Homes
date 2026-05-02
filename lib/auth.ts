@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { z } from "zod" // ✅ Fixed typo here
 import type { NextAuthConfig, DefaultSession } from "next-auth"
+import { JWT } from "next-auth/jwt"
 
 const loginSchema = z.object({
   email: z.string().email(),
