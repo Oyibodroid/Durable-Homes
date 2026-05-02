@@ -10,7 +10,7 @@ export default async function AccountOrderDetailPage({
   params,
 }: {
   // ✅ params is a Promise in Next.js 15+
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
   const session = await auth()
 
@@ -19,7 +19,7 @@ export default async function AccountOrderDetailPage({
   }
 
   // ✅ Await params before accessing properties
-  const { id } = params
+  const { id } = await params
 
   const order = await prisma.order.findUnique({
     where: { id },
