@@ -36,7 +36,7 @@ import { WishlistButton } from "@/components/wishlist/WishlistButton";
 import { ReviewForm } from "@/components/product/Reviewform";
 
 interface ProductPageProps {
-  params: { slug: string };
+  params: { slug: string }>;
 }
 
 async function getProduct(slug: string) {
