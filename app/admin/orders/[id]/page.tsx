@@ -37,10 +37,10 @@ export default async function OrderDetailPage({
   params,
 }: {
   // ✅ params is a Promise in Next.js 15+
-  params: Promise<{ id: string }>
+  params: { id: string }
 }) {
   // ✅ Await params before accessing properties
-  const { id } = await params
+  const { id } = params
 
   const order = await prisma.order.findUnique({
     where: { id },

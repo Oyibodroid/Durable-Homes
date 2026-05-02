@@ -33,12 +33,12 @@ async function updateDiscount(formData: FormData) {
 export default async function EditDiscountPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }) {
   const session = await auth()
   if (!session || session.user.role !== 'ADMIN') redirect('/')
 
-  const { id } = await params
+  const { id } = params
   const discount = await prisma.discount.findUnique({ where: { id } })
   if (!discount) notFound()
 

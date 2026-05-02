@@ -67,10 +67,10 @@ interface Product {
 export default function EditProductPage({
   params,
 }: {
-  params: Promise<{ id: string }> // params is a Promise
+  params: { id: string } // params is a Promise
 }) {
   // Unwrap params using React.use()
-  const { id } = use(params)
+  const { id } = params
   
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)

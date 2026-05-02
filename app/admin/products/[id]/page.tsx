@@ -8,9 +8,9 @@ import { Edit, ArrowLeft, Package, DollarSign, Calendar, Star } from 'lucide-rea
 export default async function ProductDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }) {
-  const { id } = await params // Unwrap the Promise
+  const { id } = params // Unwrap the Promise
 
   const product = await prisma.product.findUnique({
     where: { id },

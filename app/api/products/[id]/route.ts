@@ -23,7 +23,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params // Unwrap the Promise
+    const { id } = await params
     
     const product = await prisma.product.findUnique({
       where: { id },
@@ -67,7 +67,7 @@ export async function PUT(
   }
 
   try {
-    const { id } = await params // Unwrap the Promise
+    const { id } = await params 
     const json = await request.json()
     const body = productSchema.parse(json)
 
@@ -139,7 +139,7 @@ export async function DELETE(
   }
 
   try {
-    const { id } = await params // Unwrap the Promise
+    const { id } = await params
     
     await prisma.product.delete({
       where: { id },
