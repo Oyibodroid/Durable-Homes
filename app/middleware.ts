@@ -1,8 +1,7 @@
-import { withAuth } from 'next-auth/middleware'
+import { auth } from '@/lib/auth'          // ✅ your auth config (adjust path if needed)
 import { NextResponse } from 'next/server'
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
-import { getToken } from 'next-auth/jwt'
 
 // Rate limiting for API routes
 const ratelimit = new Ratelimit({
@@ -10,47 +9,39 @@ const ratelimit = new Ratelimit({
   limiter: Ratelimit.slidingWindow(10, '10 s'),
 })
 
-export default withAuth(
-  async function middleware(req) {
-    const token = await getToken({ req })
-    const isAuth = !!token
-    const isAuthPage = req.nextUrl.pathname.startsWith('/auth')
-    const isAdminRoute = req.nextUrl.pathname.startsWith('/admin')
-    const isApiRoute = req.nextUrl.pathname.startsWith('/api')
+export default auth(async (req) => {     // ✅ use auth() directly
+  const { pathname } = req.nextUrl
+  const token = req.auth                  // ✅ session/token available here (no getToken needed)
+  const isAuth = !!token
+  const isAuthPage = pathname.startsWith('/auth')
+  const isAdminRoute = pathname.startsWith('/admin')
+  const isApiRoute = pathname.startsWith('/api')
 
-    // Rate limiting for API routes
-    if (isApiRoute) {
-      const ip = req.ip ?? '127.0.0.1'
-      const { success } = await ratelimit.limit(ip)
+  // Rate limiting for API routes
+  if (isApiRoute) {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '127.0.0.1'
+    const { success } = await ratelimit.limit(ip)
 
-      if (!success) {
-        return new NextResponse('Too Many Requests', {
-          status: 429,
-          headers: {
-            'Retry-After': '10',
-          },
-        })
-      }
+    if (!success) {
+      return new NextResponse('Too Many Requests', {
+        status: 429,
+        headers: { 'Retry-After': '10' },
+      })
     }
-
-    // Redirect authenticated users away from auth pages
-    if (isAuthPage && isAuth) {
-      return NextResponse.redirect(new URL('/', req.url))
-    }
-
-    // Protect admin routes
-    if (isAdminRoute && (!isAuth || token?.role !== 'ADMIN')) {
-      return NextResponse.redirect(new URL('/auth/signin', req.url))
-    }
-
-    return NextResponse.next()
-  },
-  {
-    callbacks: {
-      authorized: () => true, // We handle authorization in the middleware function
-    },
   }
-)
+
+  // Redirect authenticated users away from auth pages
+  if (isAuthPage && isAuth) {
+    return NextResponse.redirect(new URL('/', req.url))
+  }
+
+  // Protect admin routes
+  if (isAdminRoute && (!isAuth || token?.role !== 'ADMIN')) {
+    return NextResponse.redirect(new URL('/auth/signin', req.url))
+  }
+
+  return NextResponse.next()
+})
 
 export const config = {
   matcher: [
