@@ -1,7 +1,5 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import Google from "next-auth/providers/google"
-import GitHub from "next-auth/providers/github"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
@@ -19,14 +17,6 @@ export const authConfig = {
     error: "/auth/error",
   },
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    }),
     Credentials({
       name: "credentials",
       credentials: {
@@ -37,55 +27,43 @@ export const authConfig = {
         try {
           if (!credentials?.email || !credentials?.password) return null
           const { email, password } = loginSchema.parse(credentials)
+          
           const user = await prisma.user.findUnique({ where: { email } })
           if (!user || !user.password) return null
+          
           const isValid = await bcrypt.compare(password, user.password)
           if (!isValid) return null
+          
+          // Ensure they are verified before logging in
           if (!user.emailVerified) return null
-          return { id: user.id, email: user.email, name: user.name, role: user.role }
+
+          return { 
+            id: user.id, 
+            email: user.email, 
+            name: user.name, 
+            role: user.role 
+          }
         } catch (error) {
-          console.error("Auth error:", error)
           return null
         }
       },
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider === "google" || account?.provider === "github") {
-        try {
-          const existingUser = await prisma.user.findUnique({ where: { email: user.email! } })
-          if (!existingUser) {
-            const newUser = await prisma.user.create({
-              data: { email: user.email!, name: user.name, image: user.image, emailVerified: new Date() },
-            })
-            user.id = newUser.id
-          } else {
-            user.id = existingUser.id
-            await prisma.user.update({
-              where: { id: existingUser.id },
-              data: { image: user.image ?? existingUser.image, name: user.name ?? existingUser.name, emailVerified: existingUser.emailVerified ?? new Date() },
-            })
-          }
-        } catch (error) {
-          console.error("Social login DB error:", error)
-          return false
-        }
-      }
-      return true
-    },
-    async jwt({ token, user, account }) {
-      if (user) { token.id = user.id; token.role = (user as any).role ?? "USER" }
-      if (account?.provider !== "credentials" && token.id && !token.role) {
-        try {
-          const dbUser = await prisma.user.findUnique({ where: { id: token.id as string }, select: { role: true } })
-          token.role = dbUser?.role ?? "USER"
-        } catch {}
+    async jwt({ token, user }) {
+      // When the user logs in, attach id and role to the token
+      if (user) {
+        token.id = user.id
+        token.role = (user as any).role ?? "USER"
       }
       return token
     },
     async session({ session, token }) {
-      if (session?.user) { session.user.id = token.id as string; session.user.role = token.role as string }
+      // Pass the id and role from the token to the browser session
+      if (session.user) {
+        (session.user as any).id = token.id as string;
+        (session.user as any).role = token.role as string;
+      }
       return session
     },
   },
