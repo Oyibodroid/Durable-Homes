@@ -11,7 +11,7 @@ async function updateOrderStatus(formData: FormData) {
   'use server'
 
   const orderId = formData.get('orderId') as string
-  const status = formData.get('status') as string
+  const status = formData.get('status') as OrderStatus // ✅ now correct
 
   try {
     await prisma.order.update({
