@@ -3,7 +3,8 @@ import Credentials from "next-auth/providers/credentials"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
-import type { NextAuthConfig } from "next-auth"
+import type { NextAuthConfig, DefaultSession } from "next-auth"
+import { JWT } from "next-auth/jwt"
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -34,7 +35,6 @@ export const authConfig = {
           const isValid = await bcrypt.compare(password, user.password)
           if (!isValid) return null
           
-          // Ensure they are verified before logging in
           if (!user.emailVerified) return null
 
           return { 
@@ -51,18 +51,18 @@ export const authConfig = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // When the user logs in, attach id and role to the token
+      // ✅ Explicitly cast id to string to satisfy the JWT type
       if (user) {
-        token.id = user.id
+        token.id = user.id as string
         token.role = (user as any).role ?? "USER"
       }
       return token
     },
     async session({ session, token }) {
-      // Pass the id and role from the token to the browser session
+      // ✅ Use the typed token values
       if (session.user) {
-        (session.user as any).id = token.id as string;
-        (session.user as any).role = token.role as string;
+        session.user.id = token.id
+        session.user.role = token.role
       }
       return session
     },
@@ -71,3 +71,25 @@ export const authConfig = {
 } satisfies NextAuthConfig
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig)
+
+// ── TYPE DEFINITIONS ──────────────────────────────────────────────────────────
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      role: string
+    } & DefaultSession["user"]
+  }
+
+  interface User {
+    role?: string
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string    // ✅ Explicitly defined as string
+    role: string  // ✅ Explicitly defined as string
+  }
+}
