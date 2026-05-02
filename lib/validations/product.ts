@@ -15,6 +15,7 @@ export const productSchema = z.object({
   status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED', 'OUT_OF_STOCK']).default('DRAFT'),
   featured: z.boolean().default(false),
   images: z.array(z.string()).optional(),
+  quantity: z.number().int().min(0).default(0),
 })
 
 export type ProductInput = z.infer<typeof productSchema>
