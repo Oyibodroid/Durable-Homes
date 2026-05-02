@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 // PATCH: Toggle approval status
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string }}
 ) {
   const session = await auth();
   if (session?.user?.role !== "ADMIN") {
@@ -30,7 +30,7 @@ export async function PATCH(
 // DELETE: Remove a review
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   const session = await auth();
   if (session?.user?.role !== "ADMIN") {
