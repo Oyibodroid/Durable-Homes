@@ -1,70 +1,53 @@
-// app/error.tsx
-'use client';
+'use client'
 
-import { useEffect } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { useEffect } from 'react'
+import Link from 'next/link'
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 
-export default function Error({
+export default function ErrorPage({
   error,
   reset,
 }: {
-  error: Error & { digest?: string };
-  reset: () => void;
+  error: Error & { digest?: string }
+  reset: () => void
 }) {
   useEffect(() => {
-    // Log error to monitoring service
-    console.error('Application error:', error);
-  }, [error]);
+    console.error(error)
+  }, [error])
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center px-4">
-      <Card className="max-w-md w-full p-8 text-center">
-        <div className="mb-6">
-          <div className="w-20 h-20 bg-gold-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-10 h-10 text-gold-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Something went wrong!
-          </h1>
-          <p className="text-gray-600 mb-2">
-            We apologize for the inconvenience. Our team has been notified.
-          </p>
-          {error.digest && (
-            <p className="text-sm text-gray-500 mb-6">
-              Error ID: {error.digest}
-            </p>
-          )}
-        </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Nunito:wght@400;500;600;700&display=swap');
+        .font-display { font-family:'Cormorant Garamond',serif; }
+        .hex-bg { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill='%23C9A84C' fill-opacity='0.04'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5z'/%3E%3C/g%3E%3C/svg%3E"); }
+      `}</style>
 
-        <div className="space-y-3">
-          <Button
-            onClick={reset}
-            className="w-full bg-gold-500 hover:bg-gold-600"
-          >
-            Try again
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => window.location.href = '/'}
-          >
-            Go back home
-          </Button>
+      <div className="min-h-screen bg-[#111008] hex-bg flex items-center justify-center px-6"
+        style={{ fontFamily:"'Nunito',sans-serif" }}>
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-red-900/30 border border-red-700/40 flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="h-8 w-8 text-red-400" />
+          </div>
+          <h1 className="font-display text-4xl text-white font-medium mb-3">
+            Something went wrong
+          </h1>
+          <p className="text-gray-500 text-sm leading-relaxed mb-10">
+            An unexpected error occurred. Our team has been notified.
+            {error.digest && <span className="block mt-2 text-xs text-gray-700">Error ID: {error.digest}</span>}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button onClick={reset}
+              className="inline-flex items-center justify-center gap-2 bg-[#C9A84C] hover:bg-[#b8943c] text-[#111008] font-bold px-6 py-3.5 transition-colors">
+              <RefreshCw className="h-4 w-4" />Try Again
+            </button>
+            <Link href="/"
+              className="inline-flex items-center justify-center gap-2 border border-[#C9A84C]/30 hover:border-[#C9A84C] text-[#C9A84C] font-semibold px-6 py-3.5 transition-all">
+              <Home className="h-4 w-4" />Go Home
+            </Link>
+          </div>
         </div>
-      </Card>
-    </div>
-  );
+      </div>
+    </>
+  )
 }

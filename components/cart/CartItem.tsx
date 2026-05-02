@@ -5,12 +5,33 @@ import Link from 'next/link'
 import { CartItem as CartItemType } from '@/hooks/useCart'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Trash2, Package, AlertCircle } from 'lucide-react'
+import { Trash2, AlertCircle } from 'lucide-react'
 import { useCart } from '@/hooks/useCart'
 import { useState } from 'react'
 
+/** 
+ * ✅ TYPE FIX: 
+ * We extend the base CartItemType because the standard hook type 
+ * might missing database-specific fields like compareAtPrice or slug.
+ */
+interface ExtendedProduct {
+  id: string
+  name: string
+  slug: string
+  price: number
+  compareAtPrice?: number | null
+  images: any[]
+  sku?: string
+  quantity?: number
+  category?: { name: string }
+}
+
+interface ExtendedCartItem extends Omit<CartItemType, 'product'> {
+  product: ExtendedProduct
+}
+
 interface CartItemProps {
-  item: CartItemType
+  item: ExtendedCartItem
 }
 
 export function CartItem({ item }: CartItemProps) {
@@ -47,11 +68,10 @@ export function CartItem({ item }: CartItemProps) {
 
   return (
     <>
-      <div className="relative grid grid-cols-1 md:grid-cols-12 gap-4 py-6 px-4 hover:bg-gray-50 transition-colors">
+      <div className="relative grid grid-cols-1 md:grid-cols-12 gap-4 py-6 px-4 hover:bg-gray-50 transition-colors border-b border-gray-100">
         {/* Product Image & Name - Colspan 6 */}
         <div className="md:col-span-6 flex gap-4">
-          {/* Image */}
-          <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden border-2 border-gray-200 bg-gray-100">
+          <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden border-2 border-gray-200 bg-gray-100 rounded-md">
             <Link href={`/shop/${item.product.slug}`}>
               <Image
                 src={productImage}
@@ -62,7 +82,6 @@ export function CartItem({ item }: CartItemProps) {
                 onError={() => setImageError(true)}
               />
             </Link>
-            {/* Stock Indicator */}
             {isLowStock && (
               <div className="absolute top-1 left-1">
                 <span className="flex h-2 w-2">
@@ -73,7 +92,6 @@ export function CartItem({ item }: CartItemProps) {
             )}
           </div>
 
-          {/* Product Info */}
           <div className="flex-1">
             <Link href={`/shop/${item.product.slug}`}>
               <h3 className="font-bold text-gray-900 hover:text-yellow-600 transition-colors line-clamp-2">
@@ -83,17 +101,10 @@ export function CartItem({ item }: CartItemProps) {
             <p className="text-sm text-gray-500 mt-1">{categoryName}</p>
             <p className="text-xs text-gray-400 mt-1">SKU: {item.product.sku || 'N/A'}</p>
             
-            {/* Mobile Price (visible only on mobile) */}
             <div className="md:hidden mt-2">
               <span className="font-bold text-gray-900">
                 ₦{(item.product.price * item.quantity).toLocaleString()}
               </span>
-              {isLowStock && (
-                <p className="text-xs text-yellow-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Only {maxQuantity} left
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -103,6 +114,7 @@ export function CartItem({ item }: CartItemProps) {
           <span className="font-medium text-gray-900">
             ₦{item.product.price.toLocaleString()}
           </span>
+          {/* ✅ FIXED: compareAtPrice is now recognized by TypeScript */}
           {item.product.compareAtPrice && (
             <p className="text-xs text-gray-500 line-through">
               ₦{item.product.compareAtPrice.toLocaleString()}
@@ -121,13 +133,10 @@ export function CartItem({ item }: CartItemProps) {
               onChange={handleQuantityChange}
               className="w-20 h-10 text-center"
             />
-            <span className="text-xs text-gray-500">
-              / {maxQuantity}
-            </span>
           </div>
           {isLowStock && (
-            <p className="text-xs text-yellow-600 text-center mt-1 hidden md:block">
-              Low stock
+            <p className="text-xs text-yellow-600 text-center mt-1">
+              Low stock: {maxQuantity} left
             </p>
           )}
         </div>

@@ -1,150 +1,231 @@
-'use client';
+import { prisma } from '@/lib/db'
+import { auth } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import Link from 'next/link'
+import { Star, CheckCircle, XCircle, Clock, Eye } from 'lucide-react'
 
-import { useState, useEffect } from 'react';
-import { toast } from '@/components/ui/Toast';
-import { Check, X, Star, Trash2, Loader2 } from 'lucide-react';
-import Image from 'next/image';
-
-interface Review {
-  id: string;
-  rating: number;
-  comment: string;
-  isApproved: boolean;
-  createdAt: string;
-  user: {
-    name: string | null;
-    email: string;
-  };
-  product: {
-    name: string;
-    images: string[] | { url: string }[];
-  };
+async function approveReview(formData: FormData) {
+  'use server'
+  const session = await auth()
+  if (!session || session.user.role !== 'ADMIN') return
+  await prisma.review.update({
+    where: { id: formData.get('reviewId') as string },
+    data: { isApproved: true },
+  })
+  revalidatePath('/admin/reviews')
 }
 
-// ✅ DEFAULT EXPORT (Fixes the Vercel Build Error)
-export default function AdminReviewsPage() {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actionId, setActionId] = useState<string | null>(null);
+async function rejectReview(formData: FormData) {
+  'use server'
+  const session = await auth()
+  if (!session || session.user.role !== 'ADMIN') return
+  await prisma.review.delete({ where: { id: formData.get('reviewId') as string } })
+  revalidatePath('/admin/reviews')
+}
 
-  useEffect(() => {
-    fetchReviews();
-  }, []);
+export default async function AdminReviewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; page?: string }>
+}) {
+  const session = await auth()
+  if (!session || session.user.role !== 'ADMIN') redirect('/')
 
-  const fetchReviews = async () => {
-    try {
-      const res = await fetch('/api/admin/reviews');
-      const data = await res.json();
-      setReviews(data);
-    } catch (error) {
-      toast.error('Failed to load reviews');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { status: statusParam, page: pageParam } = await searchParams
+  const page = Number(pageParam) || 1
+  const limit = 15
+  const skip = (page - 1) * limit
+  const showPending = !statusParam || statusParam === 'pending'
 
-  const handleStatusChange = async (id: string, approve: boolean) => {
-    setActionId(id);
-    try {
-      const res = await fetch(`/api/admin/reviews/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isApproved: approve }),
-      });
+  const where =
+    showPending ? { isApproved: false } :
+    statusParam === 'approved' ? { isApproved: true } : {}
 
-      if (res.ok) {
-        setReviews(reviews.map(r => r.id === id ? { ...r, isApproved: approve } : r));
-        toast.success(approve ? 'Review approved' : 'Review hidden');
-      }
-    } catch (error) {
-      toast.error('Operation failed');
-    } finally {
-      setActionId(null);
-    }
-  };
+  const [reviews, total, pendingCount] = await Promise.all([
+    prisma.review.findMany({
+      where, skip, take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { name: true, email: true } },
+        product: { select: { name: true, slug: true } },
+      },
+    }),
+    prisma.review.count({ where }),
+    prisma.review.count({ where: { isApproved: false } }),
+  ])
 
-  const deleteReview = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this review?')) return;
-    try {
-      const res = await fetch(`/api/admin/reviews/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setReviews(reviews.filter(r => r.id !== id));
-        toast.success('Review deleted');
-      }
-    } catch (error) {
-      toast.error('Delete failed');
-    }
-  };
-
-  if (loading) return (
-    <div className="flex h-96 items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-[#C9A84C]" />
-    </div>
-  );
+  const totalPages = Math.ceil(total / limit)
+  const tabs = [
+    { label: 'Pending', value: 'pending', count: pendingCount },
+    { label: 'Approved', value: 'approved' },
+    { label: 'All', value: 'all' },
+  ]
 
   return (
-    <div className="p-6 bg-[#111008] min-h-screen text-white">
-      <div className="mb-8">
-        <h1 className="text-3xl font-display font-bold text-[#C9A84C]">Client Reviews</h1>
-        <p className="text-gray-400">Approve or moderate feedback from your customers.</p>
+    <div>
+      {/* Header */}
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Reviews</h1>
+          {pendingCount > 0 && (
+            <p className="text-sm text-amber-600 mt-1">
+              {pendingCount} review{pendingCount !== 1 ? 's' : ''} awaiting approval
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="grid gap-4">
-        {reviews.length === 0 ? (
-          <div className="text-center py-20 border border-white/10 rounded-lg">
-            <p className="text-gray-500">No reviews found.</p>
-          </div>
-        ) : (
-          reviews.map((review) => (
-            <div key={review.id} className="bg-white/5 border border-white/10 p-5 rounded-lg flex flex-col md:flex-row gap-6 items-start">
-              {/* Product Info */}
-              <div className="w-full md:w-48 shrink-0">
-                <p className="text-xs font-bold text-[#C9A84C] uppercase mb-2">Product</p>
-                <p className="text-sm font-medium line-clamp-2">{review.product.name}</p>
-              </div>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 border-b border-gray-200">
+        {tabs.map((tab) => {
+          const active = (statusParam ?? 'pending') === tab.value
+          return (
+            <Link key={tab.value}
+              href={`/admin/reviews?status=${tab.value}`}
+              className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 ${
+                active
+                  ? 'border-[#C9A84C] text-gray-900'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}>
+              {tab.label}
+              {tab.count !== undefined && tab.count > 0 && (
+                <span className="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  {tab.count}
+                </span>
+              )}
+            </Link>
+          )
+        })}
+      </div>
 
-              {/* Review Content */}
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={14} className={i < review.rating ? "fill-[#C9A84C] text-[#C9A84C]" : "text-gray-600"} />
-                  ))}
-                  <span className="text-xs text-gray-500 ml-2">
-                    by {review.user.name || 'Anonymous'}
-                  </span>
-                </div>
-                <p className="text-gray-300 text-sm leading-relaxed italic">"{review.comment}"</p>
-              </div>
+      {reviews.length === 0 ? (
+        <div className="bg-white border border-gray-100 rounded-lg p-16 text-center">
+          <CheckCircle className="h-12 w-12 text-gray-200 mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">
+            {showPending ? 'No reviews pending approval' : 'No reviews found'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {reviews.map((review) => (
+            <div key={review.id}
+              className={`bg-white border rounded-lg p-5 border-l-4 ${
+                review.isApproved ? 'border-l-green-400' : 'border-l-amber-400'
+              } border-gray-100`}>
+              <div className="flex items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  {/* Product + user */}
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <Link href={`/shop/${review.product.slug}`} target="_blank"
+                      className="font-semibold text-gray-900 hover:text-[#C9A84C] transition-colors text-sm">
+                      {review.product.name}
+                    </Link>
+                    <span className="text-gray-300">·</span>
+                    <span className="text-sm text-gray-500">
+                      {review.user.name || review.user.email}
+                    </span>
+                    {review.isVerified && (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
+                        <CheckCircle className="h-3 w-3" />Verified Purchase
+                      </span>
+                    )}
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${
+                      review.isApproved
+                        ? 'bg-green-50 text-green-700 border-green-100'
+                        : 'bg-amber-50 text-amber-700 border-amber-100'
+                    }`}>
+                      {review.isApproved
+                        ? <><CheckCircle className="h-3 w-3" />Live</>
+                        : <><Clock className="h-3 w-3" />Pending</>}
+                    </span>
+                  </div>
 
-              {/* Status & Actions */}
-              <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  review.isApproved ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                }`}>
-                  {review.isApproved ? 'Live' : 'Pending'}
+                  {/* Stars + date */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`h-3.5 w-3.5 ${
+                          i < review.rating ? 'text-[#C9A84C] fill-[#C9A84C]' : 'text-gray-200'
+                        }`} />
+                      ))}
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {new Date(review.createdAt).toLocaleDateString('en-NG', {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+
+                  {/* Content */}
+                  {review.title && (
+                    <p className="font-semibold text-sm text-gray-900 mb-1">{review.title}</p>
+                  )}
+                  <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">
+                    {review.content}
+                  </p>
                 </div>
-                
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => handleStatusChange(review.id, !review.isApproved)}
-                    disabled={actionId === review.id}
-                    className={`p-2 rounded hover:bg-white/10 transition-colors ${review.isApproved ? 'text-amber-500' : 'text-green-500'}`}
-                    title={review.isApproved ? "Unapprove" : "Approve"}
-                  >
-                    {review.isApproved ? <X size={18} /> : <Check size={18} />}
-                  </button>
-                  <button 
-                    onClick={() => deleteReview(review.id)}
-                    className="p-2 text-red-500 rounded hover:bg-red-500/10 transition-colors"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2 flex-shrink-0">
+                  <Link href={`/shop/${review.product.slug}`} target="_blank"
+                    className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 px-3 py-1.5 transition-colors">
+                    <Eye className="h-3.5 w-3.5" />View
+                  </Link>
+
+                  {!review.isApproved && (
+                    <form action={approveReview}>
+                      <input type="hidden" name="reviewId" value={review.id} />
+                      <button type="submit"
+                        className="w-full inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 transition-colors">
+                        <CheckCircle className="h-3.5 w-3.5" />Approve
+                      </button>
+                    </form>
+                  )}
+
+                  <form action={rejectReview}>
+                    <input type="hidden" name="reviewId" value={review.id} />
+                    <button type="submit"
+                      className="w-full inline-flex items-center gap-1.5 text-xs text-red-600 border border-red-200 hover:bg-red-50 px-3 py-1.5 transition-colors">
+                      <XCircle className="h-3.5 w-3.5" />
+                      {review.isApproved ? 'Remove' : 'Reject'}
+                    </button>
+                  </form>
                 </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-8">
+          {page > 1 && (
+            <Link href={`/admin/reviews?status=${statusParam ?? 'pending'}&page=${page - 1}`}
+              className="px-4 py-2 border border-gray-200 text-sm text-gray-600 hover:border-[#C9A84C] hover:text-[#C9A84C] transition-colors">
+              ← Prev
+            </Link>
+          )}
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <Link key={p}
+              href={`/admin/reviews?status=${statusParam ?? 'pending'}&page=${p}`}
+              className={`w-10 h-10 flex items-center justify-center text-sm transition-colors ${
+                p === page
+                  ? 'bg-[#C9A84C] text-[#111008] font-bold'
+                  : 'border border-gray-200 text-gray-600 hover:border-[#C9A84C]'
+              }`}>
+              {p}
+            </Link>
+          ))}
+          {page < totalPages && (
+            <Link href={`/admin/reviews?status=${statusParam ?? 'pending'}&page=${page + 1}`}
+              className="px-4 py-2 border border-gray-200 text-sm text-gray-600 hover:border-[#C9A84C] hover:text-[#C9A84C] transition-colors">
+              Next →
+            </Link>
+          )}
+        </div>
+      )}
     </div>
-  );
+  )
 }
