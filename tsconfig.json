@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "ESNext",
     "lib": [
       "dom",
       "dom.iterable",
@@ -33,8 +33,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    "types/**/*.ts", // ✅ Ensures your types folder is tracked
+    "lib/**/*.ts"    // ✅ Ensures lib/auth.ts is tracked
   ],
   "exclude": [
     "node_modules"

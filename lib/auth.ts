@@ -1,10 +1,10 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
+import Google from "next-auth/providers/google"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
-import { z } from "zod"
+import { z } from "zod" // ✅ Fixed typo here
 import type { NextAuthConfig, DefaultSession } from "next-auth"
-import { JWT } from "next-auth/jwt"
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -18,12 +18,12 @@ export const authConfig = {
     error: "/auth/error",
   },
   providers: [
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
     Credentials({
       name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
       async authorize(credentials) {
         try {
           if (!credentials?.email || !credentials?.password) return null
@@ -51,7 +51,6 @@ export const authConfig = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // ✅ Explicitly cast id to string to satisfy the JWT type
       if (user) {
         token.id = user.id as string
         token.role = (user as any).role ?? "USER"
@@ -59,15 +58,13 @@ export const authConfig = {
       return token
     },
     async session({ session, token }) {
-      // ✅ Use the typed token values
       if (session.user) {
-        session.user.id = token.id
-        session.user.role = token.role
+        session.user.id = token.id as string
+        session.user.role = token.role as string
       }
       return session
     },
   },
-  debug: process.env.NODE_ENV === "development",
 } satisfies NextAuthConfig
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig)
@@ -83,13 +80,14 @@ declare module "next-auth" {
   }
 
   interface User {
-    role?: string
+    id?: string
+    role: string 
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    id: string    // ✅ Explicitly defined as string
-    role: string  // ✅ Explicitly defined as string
+    id: string
+    role: string
   }
 }

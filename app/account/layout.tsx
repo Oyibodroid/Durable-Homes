@@ -1,6 +1,6 @@
+import AccountSidebar from '@/components/account/AccountSidebar'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { AccountSidebar } from '@/components/account/AccountSidebar'
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()

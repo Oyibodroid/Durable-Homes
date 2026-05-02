@@ -15,7 +15,7 @@ const NAV = [
   { href: '/account/profile', label: 'Profile', icon: User },
 ]
 
-export function AccountSidebar() {
+export default function AccountSidebar() {
   const pathname = usePathname()
 
   const handleSignOut = async () => {

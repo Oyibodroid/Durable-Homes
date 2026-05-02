@@ -1,4 +1,4 @@
-import { User as PrismaUser, Product, Order } from '@prisma/client'
+import { User as PrismaUser, Product, Order, ProductVariant } from '@prisma/client'
 
 export interface CartItem {
   id: string
@@ -81,26 +81,3 @@ export interface Address {
   isDefault: boolean
 }
 
-// NextAuth type extensions
-declare module 'next-auth' {
-  interface User {
-    role?: string
-  }
-  
-  interface Session {
-    user: {
-      id: string
-      email: string
-      name?: string
-      role?: string
-      image?: string
-    }
-  }
-}
-
-declare module 'next-auth/jwt' {
-  interface JWT {
-    id: string
-    role?: string
-  }
-}
