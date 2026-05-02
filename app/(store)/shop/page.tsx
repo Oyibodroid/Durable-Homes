@@ -5,14 +5,14 @@ import Link from "next/link";
 import { Package, SlidersHorizontal, ChevronRight, Search } from "lucide-react";
 
 interface ShopPageProps {
-  searchParams: {
+  searchParams: Promise<{
     category?: string;
     search?: string;
     sort?: string;
     page?: string;
     minPrice?: string;
     maxPrice?: string;
-  };
+  }>;
 }
 
 export default async function ShopPage({ searchParams }: ShopPageProps) {
@@ -23,7 +23,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     page: pageParam,
     minPrice,
     maxPrice,
-  } = searchParams;
+  } = await searchParams;
   const page = Number(pageParam) || 1;
   const limit = 12;
   const skip = (page - 1) * limit;
