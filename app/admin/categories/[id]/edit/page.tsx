@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'   // ← added `use`
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
@@ -19,8 +19,9 @@ interface Category {
 export default function EditCategoryPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = use(params)            // ← unwrap params here, once
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -34,11 +35,12 @@ export default function EditCategoryPage({
   useEffect(() => {
     loadCategory()
     loadCategories()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadCategory = async () => {
     try {
-      const res = await fetch(`/api/categories/${params.id}`)
+      const res = await fetch(`/api/categories/${id}`)   // use `id` directly
       const category = await res.json()
       
       setFormData({
@@ -58,7 +60,7 @@ export default function EditCategoryPage({
       const res = await fetch('/api/categories')
       const data = await res.json()
       // Filter out current category and its children to prevent circular references
-      setCategories(data.filter((c: Category) => c.id !== params.id))
+      setCategories(data.filter((c: Category) => c.id !== id))   // use `id`
     } catch (error) {
       console.error('Failed to load categories')
     }
@@ -69,7 +71,7 @@ export default function EditCategoryPage({
     setIsSaving(true)
 
     try {
-      const res = await fetch(`/api/categories/${params.id}`, {
+      const res = await fetch(`/api/categories/${id}`, {   // use `id`
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
