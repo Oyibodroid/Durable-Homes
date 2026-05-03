@@ -3,9 +3,11 @@
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Loader2 } from 'lucide-react'
+import { Suspense } from 'react'
 
-export default function AuthErrorPage() {
+// 1. Move the logic into a separate internal component
+function AuthErrorContent() {
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
 
@@ -77,5 +79,20 @@ export default function AuthErrorPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// 2. Export the page wrapped in Suspense
+export default function AuthErrorPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-yellow-500" />
+        </div>
+      }
+    >
+      <AuthErrorContent />
+    </Suspense>
   )
 }
