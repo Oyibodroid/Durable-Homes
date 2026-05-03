@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 
@@ -9,12 +9,9 @@ import { Loader2 } from 'lucide-react'
  *
  * Paystack redirects the user here after payment with:
  * ?trxref=PS-xxx&reference=PS-xxx
- *
- * This page immediately calls the API verify route which
- * verifies the payment with Paystack, updates the DB, and
- * redirects to /checkout/success or back to /cart on failure.
  */
-export default function VerifyPage() {
+
+function VerifyContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -29,7 +26,7 @@ export default function VerifyPage() {
     // Hand off to the API route which does all the DB work
     // Using window.location so the API route can issue a redirect response
     window.location.href = `/api/payments/verify?reference=${reference}`
-  }, [])
+  }, [router, searchParams])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -43,5 +40,19 @@ export default function VerifyPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-yellow-500" />
+        </div>
+      }
+    >
+      <VerifyContent />
+    </Suspense>
   )
 }
