@@ -55,8 +55,8 @@ export function Header() {
 
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                <Image src="/images/DurableHomesLogo.png" width={1000} height={1000} alt="Durable Homes Logo" />
+              <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+                <Image src="/images/DurableHomesLogo.png" className='w-full' width={1000} height={1000} alt="Durable Homes Logo" />
               </div>
               <div className="hidden sm:block">
                 <span className="font-display text-xl text-white font-semibold tracking-wide leading-none block">

@@ -1,24 +1,26 @@
-import { NextAuthOptions } from 'next-auth'
+import { NextAuthConfig, DefaultSession } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import { PrismaAdapter } from '@auth/prisma-adapter'
-import { prisma } from '@/lib/db/client'
+import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
+
+// 1. JWT import is required for the augmentation below
+import { JWT } from "next-auth/jwt"
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 })
 
-export const authOptions: NextAuthOptions = {
+export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',
   },
   pages: {
     signIn: '/auth/signin',
-    signUp: '/auth/signup',
     error: '/auth/error',
     verifyRequest: '/auth/verify-request',
   },
@@ -52,7 +54,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: user.role, // Prisma role
           image: user.image,
         }
       },
@@ -61,8 +63,8 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.role = (user as any).role
+        token.id = user.id as string
+        token.role = (user as any).role ?? "USER"
       }
       return token
     },
@@ -74,4 +76,57 @@ export const authOptions: NextAuthOptions = {
       return session
     },
   },
+}
+
+// ── TYPE AUGMENTATION ────────────────────────────────────────────────────────
+// This MUST be exactly the same across your project to avoid "identical modifiers" errors.
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      role: string
+    } & DefaultSession["user"]
+  }
+
+  interface User {
+    id?: string
+    role: string // No '?' to keep modifiers identical
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string
+    role: string // No '?' to keep modifiers identical
+  }
+}
+
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      role: string
+    } & DefaultSession["user"]
+  }
+
+  interface User {
+    id?: string
+    role: string 
+  }
+}
+
+// ✅ ADD THIS BLOCK to fix the Adapter error
+declare module "@auth/core/adapters" {
+  interface AdapterUser {
+    role: string
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string
+    role: string
+  }
 }
