@@ -54,6 +54,9 @@ const envSchema = z.object({
 });
 
 function validateEnv() {
+  if (process.env.SKIP_ENV_VALIDATION === 'true' || process.env.VERCEL_ENV === 'preview') {
+    return process.env as any;
+  }
   try {
     return envSchema.parse(process.env);
   } catch (error) {
