@@ -1,22 +1,29 @@
-import Link from 'next/link'
-import Image from 'next/image'
-import { prisma } from '@/lib/db'
+import Link from "next/link";
+import Image from "next/image";
+import { prisma } from "@/lib/db";
 import {
-  ArrowRight, ShieldCheck, Truck, Star, Package,
-  HardHat, CheckCircle, Phone, ChevronRight
-} from 'lucide-react'
+  ArrowRight,
+  ShieldCheck,
+  Truck,
+  Star,
+  Package,
+  HardHat,
+  CheckCircle,
+  Phone,
+  ChevronRight,
+} from "lucide-react";
 
 async function getFeaturedProducts() {
   return prisma.product.findMany({
-    where: { status: 'PUBLISHED', featured: true },
+    where: { status: "PUBLISHED", featured: true },
     take: 8,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     include: {
       images: { where: { isMain: true }, take: 1 },
       category: { select: { name: true } },
       _count: { select: { reviews: true } },
     },
-  })
+  });
 }
 
 async function getCategories() {
@@ -26,21 +33,28 @@ async function getCategories() {
     include: {
       _count: { select: { products: true } },
       products: {
+        where: { status: "PUBLISHED" }, // Only take images from active products
         take: 1,
-        include: { images: { where: { isMain: true }, take: 1 } },
+        orderBy: { createdAt: "desc" },
+        include: {
+          images: {
+            where: { isMain: true },
+            take: 1,
+          },
+        },
       },
     },
-    orderBy: { products: { _count: 'desc' } },
-  })
+    orderBy: { products: { _count: "desc" } },
+  });
 }
 
 async function getStats() {
   const [products, completedOrders, users] = await Promise.all([
-    prisma.product.count({ where: { status: 'PUBLISHED' } }),
-    prisma.order.count({ where: { paymentStatus: 'COMPLETED' } }),
+    prisma.product.count({ where: { status: "PUBLISHED" } }),
+    prisma.order.count({ where: { paymentStatus: "COMPLETED" } }),
     prisma.user.count(),
-  ])
-  return { products, completedOrders, users }
+  ]);
+  return { products, completedOrders, users };
 }
 
 export default async function HomePage() {
@@ -48,10 +62,13 @@ export default async function HomePage() {
     getFeaturedProducts(),
     getCategories(),
     getStats(),
-  ])
+  ]);
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div
+      className="min-h-screen bg-white"
+      style={{ fontFamily: "'Nunito', sans-serif" }}
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Nunito:wght@300;400;500;600&display=swap');
         .font-display { font-family: 'Cormorant Garamond', serif; }
@@ -81,20 +98,32 @@ export default async function HomePage() {
 
       {/* ── HERO ─────────────────────────────────────────────────────────────── */}
       <section className="relative min-h-screen bg-[#111008] overflow-hidden flex items-center">
-
         {/* Background geometric layers */}
         <div className="absolute inset-0 hex-pattern" />
-        <div className="absolute inset-0" style={{
-          background: 'radial-gradient(ellipse 80% 60% at 70% 50%, rgba(201,168,76,0.08) 0%, transparent 70%)'
-        }} />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 70% 50%, rgba(201,168,76,0.08) 0%, transparent 70%)",
+          }}
+        />
 
         {/* Vertical gold accent line */}
         <div className="absolute left-[8%] top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[#C9A84C]/30 to-transparent hidden lg:block" />
 
         {/* Floating geometric shapes */}
-        <div className="absolute top-20 right-[15%] w-32 h-32 border border-[#C9A84C]/15 rotate-45 animate-float hidden lg:block" style={{ animationDelay: '0s' }} />
-        <div className="absolute bottom-32 right-[25%] w-16 h-16 border border-[#C9A84C]/10 rotate-12 animate-float hidden lg:block" style={{ animationDelay: '1.5s' }} />
-        <div className="absolute top-1/2 right-[8%] w-48 h-48 border border-[#C9A84C]/08 -rotate-12 animate-float hidden lg:block" style={{ animationDelay: '0.8s' }} />
+        <div
+          className="absolute top-20 right-[15%] w-32 h-32 border border-[#C9A84C]/15 rotate-45 animate-float hidden lg:block"
+          style={{ animationDelay: "0s" }}
+        />
+        <div
+          className="absolute bottom-32 right-[25%] w-16 h-16 border border-[#C9A84C]/10 rotate-12 animate-float hidden lg:block"
+          style={{ animationDelay: "1.5s" }}
+        />
+        <div
+          className="absolute top-1/2 right-[8%] w-48 h-48 border border-[#C9A84C]/08 -rotate-12 animate-float hidden lg:block"
+          style={{ animationDelay: "0.8s" }}
+        />
 
         {/* Large background number */}
         <div className="absolute right-0 top-1/2 -translate-y-1/2 font-display text-[28rem] font-semibold text-white/[0.02] select-none leading-none hidden xl:block">
@@ -103,7 +132,6 @@ export default async function HomePage() {
 
         <div className="container mx-auto px-6 lg:px-12 relative z-10 py-24 lg:py-0">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
-
             {/* Left — Copy */}
             <div>
               {/* Eyebrow */}
@@ -149,11 +177,14 @@ export default async function HomePage() {
               {/* Trust strip */}
               <div className="animate-fadeup-4 flex flex-wrap gap-6">
                 {[
-                  { icon: ShieldCheck, text: 'ISO Certified' },
-                  { icon: Truck, text: 'Fast Delivery' },
-                  { icon: Star, text: '4.8★ Rated' },
+                  { icon: ShieldCheck, text: "ISO Certified" },
+                  { icon: Truck, text: "Fast Delivery" },
+                  { icon: Star, text: "4.8★ Rated" },
                 ].map(({ icon: Icon, text }) => (
-                  <div key={text} className="flex items-center gap-2 text-gray-500 text-sm">
+                  <div
+                    key={text}
+                    className="flex items-center gap-2 text-gray-500 text-sm"
+                  >
                     <Icon className="h-4 w-4 text-[#C9A84C]" />
                     {text}
                   </div>
@@ -168,7 +199,9 @@ export default async function HomePage() {
                 <div className="w-12 h-12 bg-[#C9A84C]/10 border border-[#C9A84C]/30 flex items-center justify-center mb-6">
                   <HardHat className="h-6 w-6 text-[#C9A84C]" />
                 </div>
-                <p className="text-white/40 text-xs tracking-widest uppercase mb-1">This Month</p>
+                <p className="text-white/40 text-xs tracking-widest uppercase mb-1">
+                  This Month
+                </p>
                 <p className="font-display text-4xl text-white font-medium mb-1">
                   {stats.completedOrders.toLocaleString()}+
                 </p>
@@ -176,11 +209,15 @@ export default async function HomePage() {
                 <div className="mt-6 pt-6 border-t border-white/5 flex justify-between">
                   <div>
                     <p className="text-white/30 text-xs mb-1">Products</p>
-                    <p className="text-white font-semibold">{stats.products}+</p>
+                    <p className="text-white font-semibold">
+                      {stats.products}+
+                    </p>
                   </div>
                   <div>
                     <p className="text-white/30 text-xs mb-1">Customers</p>
-                    <p className="text-white font-semibold">{stats.users.toLocaleString()}+</p>
+                    <p className="text-white font-semibold">
+                      {stats.users.toLocaleString()}+
+                    </p>
                   </div>
                   <div>
                     <p className="text-white/30 text-xs mb-1">Cities</p>
@@ -201,7 +238,9 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Verified Supplier</p>
-                    <p className="text-xs font-bold text-gray-900">SON Certified</p>
+                    <p className="text-xs font-bold text-gray-900">
+                      CAC registered
+                    </p>
                   </div>
                 </div>
               </div>
@@ -215,13 +254,29 @@ export default async function HomePage() {
 
       {/* ── MARQUEE STRIP ─────────────────────────────────────────────────────── */}
       <div className="bg-[#C9A84C] py-3 overflow-hidden">
-        <div className="flex gap-12 animate-[marquee_20s_linear_infinite] whitespace-nowrap" style={{ width: 'max-content' }}>
-          {Array(3).fill([
-            ' Cement & Concrete', ' Steel & Iron', ' Windows & Doors',
-            ' Paints & Finishes', ' Roofing Materials', ' Plumbing', '  Electrical',
-          ]).flat().map((item, i) => (
-            <span key={i} className="text-[#111008] font-semibold text-sm tracking-wide">{item}</span>
-          ))}
+        <div
+          className="flex gap-12 animate-[marquee_20s_linear_infinite] whitespace-nowrap"
+          style={{ width: "max-content" }}
+        >
+          {Array(3)
+            .fill([
+              " Cement & Concrete",
+              " Steel & Iron",
+              " Windows & Doors",
+              " Paints & Finishes",
+              " Roofing Materials",
+              " Plumbing",
+              "  Electrical",
+            ])
+            .flat()
+            .map((item, i) => (
+              <span
+                key={i}
+                className="text-[#111008] font-semibold text-sm tracking-wide"
+              >
+                {item}
+              </span>
+            ))}
         </div>
         <style>{`@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-33.33%)}}`}</style>
       </div>
@@ -233,58 +288,63 @@ export default async function HomePage() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="h-px w-8 bg-[#C9A84C]" />
-                <span className="text-[#C9A84C] text-xs tracking-[0.2em] uppercase font-semibold">Browse</span>
+                <span className="text-[#C9A84C] text-xs tracking-[0.2em] uppercase font-semibold">
+                  Browse
+                </span>
               </div>
               <h2 className="font-display text-4xl lg:text-5xl font-medium text-gray-900">
                 Shop by Category
               </h2>
             </div>
-            <Link href="/shop" className="hidden sm:flex items-center gap-2 text-[#C9A84C] font-medium hover:gap-3 transition-all text-sm">
+            <Link
+              href="/shop"
+              className="hidden sm:flex items-center gap-2 text-[#C9A84C] font-medium hover:gap-3 transition-all text-sm"
+            >
               View all <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
 
-          {categories.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {categories.map((cat, i) => {
-                const img = cat.products[0]?.images[0]?.url
-                return (
-                  <Link key={cat.id} href={`/shop?category=${cat.id}`}
-                    className="group card-hover"
-                    style={{ animationDelay: `${i * 0.05}s` }}
-                  >
-                    <div className="relative aspect-square bg-gray-100 overflow-hidden mb-3">
-                      {img ? (
-                        <Image src={img} alt={cat.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <Package className="h-10 w-10 text-gray-300" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#111008]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-xs text-white font-medium">{cat._count.products} products</span>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {categories.map((cat, i) => {
+              // Correctly extract the image URL from the nested products query
+              const categoryImage = cat.products[0]?.images[0]?.url;
+
+              return (
+                <Link
+                  key={cat.id}
+                  href={`/shop?category=${cat.id}`}
+                  className="group card-hover"
+                  style={{ animationDelay: `${i * 0.05}s` }}
+                >
+                  <div className="relative aspect-square bg-gray-100 overflow-hidden mb-3">
+                    {categoryImage ? (
+                      <Image
+                        src={categoryImage}
+                        alt={cat.name}
+                        fill
+                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center bg-gray-50">
+                        <Package className="h-10 w-10 text-gray-300" />
                       </div>
+                    )}
+
+                    {/* Overlay for count */}
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-300" />
+                    <div className="absolute bottom-3 left-3">
+                      <span className="text-[10px] text-white uppercase tracking-widest font-bold bg-[#C9A84C] px-2 py-0.5">
+                        {cat._count.products} Items
+                      </span>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 group-hover:text-[#C9A84C] transition-colors leading-snug">
-                      {cat.name}
-                    </p>
-                  </Link>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {['Cement', 'Steel', 'Roofing', 'Tiles', 'Paint', 'Plumbing'].map((name, i) => (
-                <Link key={name} href="/shop" className="group card-hover">
-                  <div className="aspect-square bg-gray-100 flex items-center justify-center mb-3">
-                    <Package className="h-10 w-10 text-gray-300 group-hover:text-[#C9A84C] transition-colors" />
                   </div>
-                  <p className="text-sm font-semibold text-gray-900 group-hover:text-[#C9A84C] transition-colors">{name}</p>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-[#C9A84C] transition-colors leading-snug">
+                    {cat.name}
+                  </p>
                 </Link>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -295,13 +355,18 @@ export default async function HomePage() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="h-px w-8 bg-[#C9A84C]" />
-                <span className="text-[#C9A84C] text-xs tracking-[0.2em] uppercase font-semibold">Featured</span>
+                <span className="text-[#C9A84C] text-xs tracking-[0.2em] uppercase font-semibold">
+                  Featured
+                </span>
               </div>
               <h2 className="font-display text-4xl lg:text-5xl font-medium text-gray-900">
                 Best Sellers
               </h2>
             </div>
-            <Link href="/shop" className="hidden sm:flex items-center gap-2 text-[#C9A84C] font-medium hover:gap-3 transition-all text-sm">
+            <Link
+              href="/shop"
+              className="hidden sm:flex items-center gap-2 text-[#C9A84C] font-medium hover:gap-3 transition-all text-sm"
+            >
               Shop all <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
@@ -309,15 +374,28 @@ export default async function HomePage() {
           {featured.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {featured.map((product) => {
-                const img = product.images[0]?.url
-                const price = Number(product.price)
-                const compareAt = product.compareAtPrice ? Number(product.compareAtPrice) : null
-                const discount = compareAt ? Math.round(((compareAt - price) / compareAt) * 100) : 0
+                const img = product.images[0]?.url;
+                const price = Number(product.price);
+                const compareAt = product.compareAtPrice
+                  ? Number(product.compareAtPrice)
+                  : null;
+                const discount = compareAt
+                  ? Math.round(((compareAt - price) / compareAt) * 100)
+                  : 0;
                 return (
-                  <Link key={product.id} href={`/shop/${product.slug}`} className="group card-hover bg-white">
+                  <Link
+                    key={product.id}
+                    href={`/shop/${product.slug}`}
+                    className="group card-hover bg-white"
+                  >
                     <div className="relative aspect-square overflow-hidden bg-gray-100">
                       {img ? (
-                        <Image src={img} alt={product.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                        <Image
+                          src={img}
+                          alt={product.name}
+                          fill
+                          className="object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center">
                           <Package className="h-12 w-12 text-gray-300" />
@@ -335,15 +413,21 @@ export default async function HomePage() {
                       </div>
                     </div>
                     <div className="p-4">
-                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{product.category?.name}</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
+                        {product.category?.name}
+                      </p>
                       <p className="font-semibold text-gray-900 group-hover:text-[#C9A84C] transition-colors line-clamp-2 text-sm leading-snug mb-3">
                         {product.name}
                       </p>
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-bold text-gray-900">₦{price.toLocaleString()}</p>
+                          <p className="font-bold text-gray-900">
+                            ₦{price.toLocaleString()}
+                          </p>
                           {compareAt && (
-                            <p className="text-xs text-gray-400 line-through">₦{compareAt.toLocaleString()}</p>
+                            <p className="text-xs text-gray-400 line-through">
+                              ₦{compareAt.toLocaleString()}
+                            </p>
                           )}
                         </div>
                         <div className="w-8 h-8 bg-[#C9A84C] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -352,14 +436,19 @@ export default async function HomePage() {
                       </div>
                     </div>
                   </Link>
-                )
+                );
               })}
             </div>
           ) : (
             <div className="text-center py-16">
               <Package className="h-14 w-14 mx-auto text-gray-300 mb-4" />
               <p className="text-gray-500 mb-4">No featured products yet.</p>
-              <Link href="/shop" className="text-[#C9A84C] font-medium hover:underline">Browse all products →</Link>
+              <Link
+                href="/shop"
+                className="text-[#C9A84C] font-medium hover:underline"
+              >
+                Browse all products →
+              </Link>
             </div>
           )}
         </div>
@@ -368,15 +457,21 @@ export default async function HomePage() {
       {/* ── WHY CHOOSE US ───────────────────────────────────────────────────── */}
       <section className="py-24 bg-[#111008] relative overflow-hidden">
         <div className="absolute inset-0 hex-pattern opacity-50" />
-        <div className="absolute right-0 top-0 bottom-0 w-1/2" style={{
-          background: 'radial-gradient(ellipse 70% 80% at 90% 50%, rgba(201,168,76,0.06) 0%, transparent 70%)'
-        }} />
+        <div
+          className="absolute right-0 top-0 bottom-0 w-1/2"
+          style={{
+            background:
+              "radial-gradient(ellipse 70% 80% at 90% 50%, rgba(201,168,76,0.06) 0%, transparent 70%)",
+          }}
+        />
 
         <div className="container mx-auto px-6 lg:px-12 relative z-10">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-3 mb-4">
               <div className="h-px w-8 bg-[#C9A84C]" />
-              <span className="text-[#C9A84C] text-xs tracking-[0.2em] uppercase font-semibold">Why Us</span>
+              <span className="text-[#C9A84C] text-xs tracking-[0.2em] uppercase font-semibold">
+                Why Us
+              </span>
               <div className="h-px w-8 bg-[#C9A84C]" />
             </div>
             <h2 className="font-display text-4xl lg:text-5xl font-medium text-white">
@@ -386,16 +481,41 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: ShieldCheck, title: 'Certified Quality', desc: 'Every product meets SON and ISO standards. We only stock what we can stand behind.', stat: '100%' },
-              { icon: Truck, title: 'Nationwide Delivery', desc: 'Lagos, Abuja, Port Harcourt and beyond. Bulk orders delivered to your site.', stat: '12+ Cities' },
-              { icon: Star, title: 'Top Rated', desc: 'Over 4.8 stars across thousands of verified customer reviews.', stat: '4.8 ★' },
-              { icon: Phone, title: 'Expert Support', desc: 'Technical advice from our team before, during, and after your purchase.', stat: '24/7' },
+              {
+                icon: ShieldCheck,
+                title: "Certified Quality",
+                desc: "Every product meets SON and ISO standards. We only stock what we can stand behind.",
+                stat: "100%",
+              },
+              {
+                icon: Truck,
+                title: "Nationwide Delivery",
+                desc: "Lagos, Abuja, Port Harcourt and beyond. Bulk orders delivered to your site.",
+                stat: "12+ Cities",
+              },
+              {
+                icon: Star,
+                title: "Top Rated",
+                desc: "Over 4.8 stars across thousands of verified customer reviews.",
+                stat: "4.8 ★",
+              },
+              {
+                icon: Phone,
+                title: "Expert Support",
+                desc: "Technical advice from our team before, during, and after your purchase.",
+                stat: "24/7",
+              },
             ].map(({ icon: Icon, title, desc, stat }) => (
-              <div key={title} className="group border border-[#C9A84C]/15 hover:border-[#C9A84C]/40 p-7 transition-all duration-300 hover:bg-[#C9A84C]/5">
+              <div
+                key={title}
+                className="group border border-[#C9A84C]/15 hover:border-[#C9A84C]/40 p-7 transition-all duration-300 hover:bg-[#C9A84C]/5"
+              >
                 <div className="w-12 h-12 border border-[#C9A84C]/30 flex items-center justify-center mb-5 group-hover:bg-[#C9A84C]/10 transition-colors">
                   <Icon className="h-5 w-5 text-[#C9A84C]" />
                 </div>
-                <p className="font-display text-3xl text-[#C9A84C] font-medium mb-1">{stat}</p>
+                <p className="font-display text-3xl text-[#C9A84C] font-medium mb-1">
+                  {stat}
+                </p>
                 <h3 className="text-white font-semibold mb-2">{title}</h3>
                 <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
               </div>
@@ -410,7 +530,9 @@ export default async function HomePage() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-3 mb-4">
               <div className="h-px w-8 bg-[#C9A84C]" />
-              <span className="text-[#C9A84C] text-xs tracking-[0.2em] uppercase font-semibold">Reviews</span>
+              <span className="text-[#C9A84C] text-xs tracking-[0.2em] uppercase font-semibold">
+                Reviews
+              </span>
               <div className="h-px w-8 bg-[#C9A84C]" />
             </div>
             <h2 className="font-display text-4xl lg:text-5xl font-medium text-gray-900">
@@ -420,15 +542,41 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { name: 'Emeka O.', location: 'Lagos', review: 'Ordered cement and iron rods for my building project. Delivery was on time and the quality is exactly what was described. Will be back for Phase 2.', rating: 5 },
-              { name: 'Adaeze K.', location: 'Abuja', review: 'The tiles I bought are stunning and held up perfectly during installation. Customer service team was very helpful when I had questions about quantity.', rating: 5 },
-              { name: 'Tunde B.', location: 'Port Harcourt', review: 'Best building materials supplier I have found online. Competitive prices and genuine products. My contractor has already placed three orders this month.', rating: 5 },
+              {
+                name: "Emeka O.",
+                location: "Lagos",
+                review:
+                  "Ordered cement and iron rods for my building project. Delivery was on time and the quality is exactly what was described. Will be back for Phase 2.",
+                rating: 5,
+              },
+              {
+                name: "Adaeze K.",
+                location: "Abuja",
+                review:
+                  "The tiles I bought are stunning and held up perfectly during installation. Customer service team was very helpful when I had questions about quantity.",
+                rating: 5,
+              },
+              {
+                name: "Tunde B.",
+                location: "Port Harcourt",
+                review:
+                  "Best building materials supplier I have found online. Competitive prices and genuine products. My contractor has already placed three orders this month.",
+                rating: 5,
+              },
             ].map(({ name, location, review, rating }) => (
-              <div key={name} className="border border-gray-100 p-7 hover:border-[#C9A84C]/30 transition-colors card-hover">
+              <div
+                key={name}
+                className="border border-gray-100 p-7 hover:border-[#C9A84C]/30 transition-colors card-hover"
+              >
                 <div className="flex gap-1 mb-4">
-                  {Array(rating).fill(0).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 text-[#C9A84C] fill-[#C9A84C]" />
-                  ))}
+                  {Array(rating)
+                    .fill(0)
+                    .map((_, i) => (
+                      <Star
+                        key={i}
+                        className="h-4 w-4 text-[#C9A84C] fill-[#C9A84C]"
+                      />
+                    ))}
                 </div>
                 <p className="font-display italic text-gray-700 text-[17px] leading-relaxed mb-6">
                   "{review}"
@@ -438,7 +586,9 @@ export default async function HomePage() {
                     {name.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">{name}</p>
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {name}
+                    </p>
                     <p className="text-xs text-gray-400">{location}, Nigeria</p>
                   </div>
                 </div>
@@ -450,9 +600,13 @@ export default async function HomePage() {
 
       {/* ── CTA BANNER ──────────────────────────────────────────────────────── */}
       <section className="py-20 bg-[#C9A84C] relative overflow-hidden">
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23111008\' fill-opacity=\'0.06\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-        }} />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23111008' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+          }}
+        />
         <div className="container mx-auto px-6 lg:px-12 relative z-10 text-center">
           <h2 className="font-display text-4xl lg:text-6xl font-medium text-[#111008] mb-4">
             Ready to Build?
@@ -479,5 +633,5 @@ export default async function HomePage() {
         </div>
       </section>
     </div>
-  )
+  );
 }
