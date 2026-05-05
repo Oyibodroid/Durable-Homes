@@ -20,7 +20,7 @@ const productSchema = z.object({
   images: z
     .array(
       z.object({
-        url: z.string().url(),
+        url: z.string(),
         isMain: z.boolean(),
         position: z.number(),
       }),

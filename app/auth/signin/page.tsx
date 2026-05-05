@@ -102,7 +102,7 @@ function SignInContent() {
         <div className="w-full max-w-md anim-in">
           <Link href="/" className="flex items-center gap-3 mb-10 lg:hidden">
             <div className="w-8 h-8 bg-[#C9A84C] flex items-center justify-center">
-              <span className="text-[#111008] font-black text-sm">DH</span>
+              <Image src="/images/DurableHomeLogo.png" alt="Durable Homes logo" width={16} height={16} />
             </div>
             <span className="font-display text-xl text-white font-semibold">Durable Homes</span>
           </Link>

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import { toast } from '@/components/ui/Toast'
 import { ArrowRight, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import Image from 'next/image'
 
 function GoogleIcon() {
   return (
@@ -81,7 +82,7 @@ export default function SignUpPage() {
         <div className="hidden lg:flex flex-col justify-between w-[42%] p-12 border-r border-white/5">
           <Link href="/" className="flex items-center gap-3">
             <div className="w-8 h-8 bg-[#C9A84C] flex items-center justify-center">
-              <span className="text-[#111008] font-black text-sm">DH</span>
+              <Image src="/images/DurableHomeLogo.png" alt="Durable Homes logo" width={16} height={16} />
             </div>
             <span className="font-display text-xl text-white font-semibold">Durable Homes</span>
           </Link>
@@ -108,7 +109,7 @@ export default function SignUpPage() {
           <div className="w-full max-w-md anim-in">
             <Link href="/" className="flex items-center gap-3 mb-10 lg:hidden">
               <div className="w-8 h-8 bg-[#C9A84C] flex items-center justify-center">
-                <span className="text-[#111008] font-black text-sm">DH</span>
+                <Image src="/images/DurableHomeLogo.png" alt="Durable Homes logo" width={16} height={16} />
               </div>
               <span className="font-display text-xl text-white font-semibold">Durable Homes</span>
             </Link>

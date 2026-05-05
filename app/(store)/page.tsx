@@ -183,7 +183,7 @@ export default async function HomePage() {
                 ].map(({ icon: Icon, text }) => (
                   <div
                     key={text}
-                    className="flex items-center gap-2 text-gray-500 text-sm"
+                    className="flex items-center gap-2 text-gray-900 font-bold text-sm"
                   >
                     <Icon className="h-4 w-4 text-[#C9A84C]" />
                     {text}
@@ -227,8 +227,10 @@ export default async function HomePage() {
               </div>
 
               {/* Offset card behind */}
-              <div className="absolute top-8 right-4 w-72 h-full bg-[#C9A84C]/5 border border-[#C9A84C]/10 -z-0" />
-              <div className="absolute top-16 right-8 w-72 h-full bg-[#C9A84C]/3 border border-[#C9A84C]/5 -z-10" />
+              {/* <div className="absolute top-8 right-4 w-72 h-full bg-[#C9A84C]/5 border border-[#C9A84C]/10 -z-0" /> */}
+              <div className="absolute top-16 right-8 w-72 h-full bg-[#C9A84C]/3 border border-[#C9A84C]/5 -z-10" >
+                <Image src="/images/hero.jpg" alt="Hero background" fill className="object-cover w-full h-full opacity-50" />
+              </div>
 
               {/* Floating badge */}
               <div className="absolute -bottom-6 -left-6 bg-white px-4 py-3 shadow-xl">
@@ -249,7 +251,7 @@ export default async function HomePage() {
         </div>
 
         {/* Bottom fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent opacity-50" />
       </section>
 
       {/* ── MARQUEE STRIP ─────────────────────────────────────────────────────── */}
