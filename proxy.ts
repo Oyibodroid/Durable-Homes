@@ -10,7 +10,14 @@ function addSecurityHeaders(response: NextResponse) {
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.paystack.com https://*.flutterwave.com https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://*.paystack.com https://*.flutterwave.com https://api.stripe.com;",
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.paystack.com https://*.flutterwave.com https://js.stripe.com; " +
+    // FIX: Added fonts.googleapis.com to style-src
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " + 
+    // FIX: Added fonts.gstatic.com to font-src
+    "font-src 'self' data: https://fonts.gstatic.com; " + 
+    "img-src 'self' data: https: blob:; " +
+    "connect-src 'self' https://*.paystack.com https://*.flutterwave.com https://api.stripe.com;"
   );
   return response;
 }
