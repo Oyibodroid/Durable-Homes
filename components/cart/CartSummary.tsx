@@ -60,7 +60,7 @@ export function CartSummary() {
 
   return (
     <div className="bg-white border-2 border-gray-200 sticky top-24">
-      <div className="bg-gray-900 text-white p-4">
+      <div className="bg-[#111008] px-5 py-4 text-white p-4">
         <h3 className="font-bold flex items-center gap-2">
           <Package className="h-5 w-5 text-yellow-500" />
           Order Summary
@@ -106,7 +106,7 @@ export function CartSummary() {
         <div className="bg-gray-50 p-4 -mx-6 mb-4 border-y border-gray-200">
           <div className="flex justify-between items-center">
             <span className="font-bold text-gray-900">Total</span>
-            <span className="text-2xl font-bold text-yellow-600">
+            <span className="text-2xl font-bold text-[#C9A84C]">
               ₦{total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -114,7 +114,7 @@ export function CartSummary() {
 
         <Button
           onClick={handleCheckout}
-          className="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 text-lg"
+          className="w-full  bg-[#C9A84C] hover:bg-[#C9A84C] text-gray-900 font-bold py-3 text-lg"
           size="lg"
           loading={isCheckingOut}
         >

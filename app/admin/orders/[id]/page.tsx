@@ -3,14 +3,14 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
-import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Printer, Mail } from 'lucide-react'
+import { ArrowLeft, Package, Truck, CheckCircle, XCircle, Printer, Mail, Clock, CreditCard, User } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 import { PrintButton } from '@/components/admin/PrintButton'
 import { OrderStatus } from '@prisma/client'
+import { cn } from '@/lib/utils'
 
 async function updateOrderStatus(formData: FormData) {
   'use server'
-
   const orderId = formData.get('orderId') as string
   const status = formData.get('status') as OrderStatus 
 
@@ -27,22 +27,14 @@ async function updateOrderStatus(formData: FormData) {
         },
       },
     })
-
     revalidatePath(`/admin/orders/${orderId}`)
   } catch (error) {
     console.error('Failed to update order status:', error)
   }
 }
 
-export default async function OrderDetailPage({
-  params,
-}: {
-  // ✅ params is a Promise in Next.js 15+
-  params: Promise<{ id: string }>
-}) {
-  // ✅ Await params before accessing properties
+export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
@@ -50,9 +42,7 @@ export default async function OrderDetailPage({
       items: {
         include: {
           product: {
-            include: {
-              images: { take: 1, where: { isMain: true } },
-            },
+            include: { images: { take: 1, where: { isMain: true } } },
           },
         },
       },
@@ -64,318 +54,193 @@ export default async function OrderDetailPage({
     },
   })
 
-  if (!order) {
-    notFound()
-  }
+  if (!order) notFound()
 
   const statusColors = {
-    PENDING:    'bg-yellow-100 text-yellow-800',
-    PROCESSING: 'bg-blue-100 text-blue-800',
-    SHIPPED:    'bg-purple-100 text-purple-800',
-    DELIVERED:  'bg-green-100 text-green-800',
-    CANCELLED:  'bg-red-100 text-red-800',
-    REFUNDED:   'bg-gray-100 text-gray-800',
-    ON_HOLD:    'bg-orange-100 text-orange-800',
+    PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
+    PROCESSING: 'bg-blue-50 text-blue-700 border-blue-200',
+    SHIPPED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    DELIVERED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    CANCELLED: 'bg-rose-50 text-rose-700 border-rose-200',
+    REFUNDED: 'bg-slate-100 text-slate-700 border-slate-200',
+    ON_HOLD: 'bg-orange-50 text-orange-700 border-orange-200',
   }
-
-  const statusIcons = {
-    PENDING:    Package,
-    PROCESSING: Package,
-    SHIPPED:    Truck,
-    DELIVERED:  CheckCircle,
-    CANCELLED:  XCircle,
-    REFUNDED:   XCircle,
-    ON_HOLD:    Package,
-  }
-
-  const StatusIcon =
-    statusIcons[order.status as keyof typeof statusIcons] ?? Package
 
   return (
-    <div>
-      <div className="flex items-center gap-4 mb-8">
-        <Link href="/admin/orders">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" />
+    <div className="max-w-6xl mx-auto">
+      {/* Header - Hidden on Print */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 print:hidden">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/orders">
+            <Button variant="outline" size="icon" className="rounded-full hover:bg-[#C9A84C] hover:text-white border-gray-200">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-display font-bold text-[#111008]">Order {order.orderNumber}</h1>
+              <span className={cn(
+                "px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+                statusColors[order.status as keyof typeof statusColors]
+              )}>
+                {order.status}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 mt-1">Placed on {new Date(order.createdAt).toLocaleDateString('en-NG', { dateStyle: 'long' })}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <PrintButton />
+          <Button className="bg-[#111008] hover:bg-[#C9A84C] transition-colors text-white gap-2">
+            <Mail className="h-4 w-4" />
+            Notify Customer
           </Button>
-        </Link>
-        <h1 className="text-3xl font-bold">Order {order.orderNumber}</h1>
-        {/* <div className="flex-1" /> */}
-        <PrintButton/>
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="col-span-2 space-y-6">
-          {/* Status Update */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Order Status</h2>
-              <div
-                className={`px-3 py-1 rounded-full text-sm font-medium inline-flex items-center gap-1 ${
-                  statusColors[order.status as keyof typeof statusColors]
-                }`}
-              >
-                <StatusIcon className="h-4 w-4" />
-                {order.status}
-              </div>
-            </div>
+      {/* Standard Invoice Header - Only Visible on Print */}
+      <div className="hidden print:block mb-10 border-b pb-8">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-display font-bold text-black uppercase tracking-tighter">Invoice</h1>
+            <p className="text-gray-500 mt-2">Order ID: {order.orderNumber}</p>
+            <p className="text-gray-500">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+          </div>
+          <div className="text-right">
+            <h2 className="text-xl font-bold">Durable Homes</h2>
+            <p className="text-sm text-gray-500">Lagos, Nigeria</p>
+            <p className="text-sm text-gray-500">support@durablehomes.ng</p>
+          </div>
+        </div>
+      </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-6">
+          {/* Status Update Form - Hidden on Print */}
+          <section className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm print:hidden">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2">
+              <Clock className="h-4 w-4" /> Update Logistics
+            </h2>
             <form action={updateOrderStatus} className="flex gap-4">
               <input type="hidden" name="orderId" value={order.id} />
               <select
                 name="status"
                 defaultValue={order.status}
-                className="flex-1 rounded-md border border-input bg-background px-3 py-2"
+                className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#C9A84C] outline-none transition-all"
               >
-                <option value="PENDING">Pending</option>
-                <option value="PROCESSING">Processing</option>
-                <option value="SHIPPED">Shipped</option>
-                <option value="DELIVERED">Delivered</option>
-                <option value="CANCELLED">Cancelled</option>
-                <option value="ON_HOLD">On Hold</option>
+                {Object.keys(statusColors).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-              <Button type="submit">Update Status</Button>
+              <Button type="submit" className="bg-[#C9A84C] hover:bg-[#111008] text-white">Update</Button>
             </form>
-          </div>
+          </section>
 
-          {/* Order Items */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Order Items</h2>
-            <div className="space-y-4">
+          {/* Items Table */}
+          <section className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+            <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+              <h2 className="text-lg font-bold font-display text-[#111008]">Inventory Details</h2>
+              <span className="text-xs font-medium text-gray-400">{order.items.length} Items</span>
+            </div>
+            <div className="divide-y divide-gray-50">
               {order.items.map((item) => (
-                <div key={item.id} className="flex gap-4 py-4 border-b last:border-0">
-                  <div className="relative h-20 w-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                <div key={item.id} className="p-6 flex gap-6 items-center">
+                  <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0 print:hidden">
                     {item.product.images[0] && (
-                      <Image
-                        src={item.product.images[0].url}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                      />
+                      <Image src={item.product.images[0].url} alt={item.name} fill className="object-cover" />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-gray-500">SKU: {item.sku}</p>
-                      </div>
-                      {/* ✅ Decimal → Number */}
-                      <p className="font-medium">
-                        ₦{Number(item.price).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                      <p className="font-medium">
-                        Total: ₦{Number(item.total).toLocaleString()}
-                      </p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-[#111008] truncate">{item.name}</p>
+                    <p className="text-xs text-gray-400 font-mono mt-0.5">SKU: {item.sku}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-500">{item.quantity} × ₦{Number(item.price).toLocaleString()}</p>
+                    <p className="font-bold text-[#111008]">₦{Number(item.total).toLocaleString()}</p>
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* Order Summary */}
-            <div className="mt-6 pt-6 border-t">
-              <dl className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <dt className="text-gray-600">Subtotal</dt>
-                  <dd>₦{Number(order.subtotal).toLocaleString()}</dd>
+            
+            {/* Financial Summary */}
+            <div className="bg-gray-50/50 p-8">
+              <div className="max-w-xs ml-auto space-y-3">
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Subtotal</span>
+                  <span className="text-[#111008]">₦{Number(order.subtotal).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <dt className="text-gray-600">Shipping</dt>
-                  <dd>₦{Number(order.shippingTotal).toLocaleString()}</dd>
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Shipping Fee</span>
+                  <span className="text-[#111008]">₦{Number(order.shippingTotal).toLocaleString()}</span>
                 </div>
                 {Number(order.discountTotal) > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <dt className="text-gray-600">Discount</dt>
-                    <dd className="text-green-600">
-                      -₦{Number(order.discountTotal).toLocaleString()}
-                    </dd>
+                  <div className="flex justify-between text-sm font-bold text-emerald-600">
+                    <span>Discount Applied</span>
+                    <span>-₦{Number(order.discountTotal).toLocaleString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm">
-                  <dt className="text-gray-600">Tax</dt>
-                  <dd>₦{Number(order.taxTotal).toLocaleString()}</dd>
+                <div className="pt-3 border-t border-gray-200 flex justify-between items-end">
+                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Grand Total</span>
+                  <span className="text-2xl font-display font-bold text-[#C9A84C]">₦{Number(order.total).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between font-medium text-lg pt-2 border-t">
-                  <dt>Total</dt>
-                  <dd>₦{Number(order.total).toLocaleString()}</dd>
-                </div>
-              </dl>
+              </div>
             </div>
-          </div>
-
-          {/* Status History */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Status History</h2>
-            <div className="space-y-4">
-              {order.statusHistory.map((history, index) => (
-                <div key={history.id} className="flex gap-4">
-                  <div className="relative">
-                    <div className="h-3 w-3 mt-1.5 rounded-full bg-primary" />
-                    {index < order.statusHistory.length - 1 && (
-                      <div className="absolute top-4 left-1.5 bottom-0 w-0.5 bg-gray-200" />
-                    )}
-                  </div>
-                  <div className="flex-1 pb-4">
-                    <div className="flex justify-between">
-                      <p className="font-medium">{history.status}</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(history.createdAt).toLocaleString('en-NG')}
-                      </p>
-                    </div>
-                    {history.note && (
-                      <p className="text-sm text-gray-600 mt-1">{history.note}</p>
-                    )}
-                    {history.changedBy && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        By: {history.changedBy}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          </section>
         </div>
 
-        {/* Sidebar */}
+        {/* Sidebar Info */}
         <div className="space-y-6">
-          {/* Customer Information */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Customer Information</h2>
+          <section className="bg-[#111008] text-white rounded-xl p-6 shadow-xl">
+            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-[#C9A84C] mb-4 flex items-center gap-2">
+              <User className="h-4 w-4" /> Client Profile
+            </h2>
             {order.user ? (
-              <div>
-                <p className="font-medium">{order.user.name}</p>
-                <p className="text-sm text-gray-600">{order.user.email}</p>
-                {order.user.phone && (
-                  <p className="text-sm text-gray-600">{order.user.phone}</p>
-                )}
-                <div className="mt-4">
-                  <Link href={`/admin/users/${order.user.id}`}>
-                    <Button variant="outline" size="sm" className="w-full">
-                      View Customer Profile
-                    </Button>
-                  </Link>
-                </div>
+              <div className="space-y-1">
+                <p className="font-display text-lg font-semibold">{order.user.name}</p>
+                <p className="text-sm text-gray-400 break-all">{order.user.email}</p>
+                <Link href={`/admin/users/${order.user.id}`} className="block mt-4 print:hidden">
+                  <Button variant="outline" size="sm" className="w-full border-white/10 bg-white/5 hover:bg-[#C9A84C] hover:text-white">Profile Details</Button>
+                </Link>
               </div>
             ) : (
               <div>
-                <p className="font-medium">Guest Customer</p>
-                <p className="text-sm text-gray-600">{order.guestEmail}</p>
+                <p className="font-semibold">{order.guestEmail}</p>
+                <p className="text-xs text-gray-400 uppercase mt-1">Guest Checkout</p>
               </div>
             )}
-          </div>
+          </section>
 
-          {/* Shipping Address */}
-          {order.shippingAddress && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Shipping Address</h2>
-              <address className="not-italic text-sm">
-                <p>
-                  {order.shippingAddress.firstName} {order.shippingAddress.lastName}
-                </p>
-                <p>{order.shippingAddress.addressLine1}</p>
-                {order.shippingAddress.addressLine2 && (
-                  <p>{order.shippingAddress.addressLine2}</p>
-                )}
-                <p>
-                  {order.shippingAddress.city}, {order.shippingAddress.state}
-                </p>
-                <p>{order.shippingAddress.postalCode}</p>
-                <p>{order.shippingAddress.country}</p>
-                {order.shippingAddress.phone && (
-                  <p className="mt-2">Phone: {order.shippingAddress.phone}</p>
-                )}
-              </address>
-            </div>
-          )}
+          <section className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
+              <Truck className="h-4 w-4" /> Shipping Route
+            </h2>
+            <address className="not-italic text-sm text-[#111008] leading-relaxed">
+              <p className="font-bold">{order.shippingAddress?.firstName} {order.shippingAddress?.lastName}</p>
+              <p>{order.shippingAddress?.addressLine1}</p>
+              <p>{order.shippingAddress?.city}, {order.shippingAddress?.state}</p>
+              <p className="text-gray-400 mt-2">{order.shippingAddress?.phone}</p>
+            </address>
+          </section>
 
-          {/* Billing Address */}
-          {order.billingAddress && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Billing Address</h2>
-              <address className="not-italic text-sm">
-                <p>
-                  {order.billingAddress.firstName} {order.billingAddress.lastName}
-                </p>
-                <p>{order.billingAddress.addressLine1}</p>
-                {order.billingAddress.addressLine2 && (
-                  <p>{order.billingAddress.addressLine2}</p>
-                )}
-                <p>
-                  {order.billingAddress.city}, {order.billingAddress.state}
-                </p>
-                <p>{order.billingAddress.postalCode}</p>
-                <p>{order.billingAddress.country}</p>
-                {order.billingAddress.phone && (
-                  <p className="mt-2">Phone: {order.billingAddress.phone}</p>
-                )}
-              </address>
-            </div>
-          )}
-
-          {/* Payment Information */}
-          {order.payments.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Payment Information</h2>
-              {order.payments.map((payment) => (
-                <div key={payment.id} className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Provider</span>
-                    <span className="font-medium">{payment.provider}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Amount</span>
-                    {/* ✅ Decimal → Number */}
-                    <span className="font-medium">
-                      ₦{Number(payment.amount).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Status</span>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        payment.status === 'COMPLETED'
-                          ? 'bg-green-100 text-green-800'
-                          : payment.status === 'PENDING'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {payment.status}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Reference</span>
-                    <span className="font-mono text-xs">{payment.reference}</span>
-                  </div>
-                  {payment.transactionId && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Transaction ID</span>
-                      <span className="font-mono text-xs">{payment.transactionId}</span>
-                    </div>
-                  )}
+          <section className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
+              <CreditCard className="h-4 w-4" /> Transaction
+            </h2>
+            {order.payments.map((payment) => (
+              <div key={payment.id} className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 uppercase">{payment.status}</span>
+                  <span className="text-sm font-bold text-[#111008]">{payment.provider}</span>
                 </div>
-              ))}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Actions</h2>
-            <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <Mail className="h-4 w-4 mr-2" />
-                Email Customer
-              </Button>
-              <PrintButton/>
-            </div>
-          </div>
+                <p className="text-[10px] font-mono text-gray-400 break-all">REF: {payment.reference}</p>
+              </div>
+            ))}
+          </section>
         </div>
+      </div>
+      
+      {/* Print Footer - Invoice only */}
+      <div className="hidden print:block mt-20 text-center border-t pt-8">
+        <p className="text-sm font-bold">Thank you for choosing Durable Homes.</p>
+        <p className="text-xs text-gray-400 mt-1">This is a computer-generated invoice. No signature required.</p>
       </div>
     </div>
   )

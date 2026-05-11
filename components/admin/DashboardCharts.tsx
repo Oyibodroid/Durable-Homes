@@ -16,35 +16,75 @@ import {
   Legend,
 } from 'recharts'
 
-// ── Revenue Line Chart ────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface RevenueDataPoint {
   date: string
   revenue: number
 }
 
+interface StatusDataPoint {
+  name: string
+  value: number
+  color: string
+}
+
+interface ProductDataPoint {
+  name: string
+  revenue: number
+}
+
+type DashboardChartsProps =
+  | {
+      type: 'revenue'
+      data: RevenueDataPoint[]
+    }
+  | {
+      type: 'donut'
+      data: StatusDataPoint[]
+    }
+  | {
+      type: 'bar'
+      data: ProductDataPoint[]
+    }
+
+// ── Revenue Line Chart ────────────────────────────────────────────────────────
+
 export function RevenueChart({ data }: { data: RevenueDataPoint[] }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+      <LineChart
+        data={data}
+        margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+      >
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+
         <XAxis
           dataKey="date"
           tick={{ fontSize: 12, fill: '#6b7280' }}
           axisLine={false}
           tickLine={false}
         />
+
         <YAxis
           tick={{ fontSize: 12, fill: '#6b7280' }}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`}
+          tickFormatter={(v) => `₦${(Number(v) / 1000).toFixed(0)}k`}
         />
+
         <Tooltip
-          formatter={(value: number) => [`₦${Number(value).toLocaleString()}`, 'Revenue']}
+          formatter={(value) => [
+            `₦${Number(value).toLocaleString()}`,
+            'Revenue',
+          ]}
           labelStyle={{ color: '#111827', fontWeight: 600 }}
-          contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
+          contentStyle={{
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+          }}
         />
+
         <Line
           type="monotone"
           dataKey="revenue"
@@ -58,15 +98,13 @@ export function RevenueChart({ data }: { data: RevenueDataPoint[] }) {
   )
 }
 
-// ── Orders by Status Donut Chart ──────────────────────────────────────────────
+// ── Orders by Status Donut Chart ─────────────────────────────────────────────
 
-interface StatusDataPoint {
-  name: string
-  value: number
-  color: string
-}
-
-export function OrderStatusChart({ data }: { data: StatusDataPoint[] }) {
+export function OrderStatusChart({
+  data,
+}: {
+  data: StatusDataPoint[]
+}) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <PieChart>
@@ -83,15 +121,27 @@ export function OrderStatusChart({ data }: { data: StatusDataPoint[] }) {
             <Cell key={index} fill={entry.color} />
           ))}
         </Pie>
+
         <Tooltip
-          formatter={(value: number, name: string) => [value, name]}
-          contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
+          formatter={(value, name) => [value, name]}
+          contentStyle={{
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+          }}
         />
+
         <Legend
           iconType="circle"
           iconSize={8}
           formatter={(value) => (
-            <span style={{ fontSize: 12, color: '#6b7280' }}>{value}</span>
+            <span
+              style={{
+                fontSize: 12,
+                color: '#6b7280',
+              }}
+            >
+              {value}
+            </span>
           )}
         />
       </PieChart>
@@ -99,14 +149,13 @@ export function OrderStatusChart({ data }: { data: StatusDataPoint[] }) {
   )
 }
 
-// ── Top Products Bar Chart ────────────────────────────────────────────────────
+// ── Top Products Bar Chart ───────────────────────────────────────────────────
 
-interface ProductDataPoint {
-  name: string
-  revenue: number
-}
-
-export function TopProductsChart({ data }: { data: ProductDataPoint[] }) {
+export function TopProductsChart({
+  data,
+}: {
+  data: ProductDataPoint[]
+}) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart
@@ -114,14 +163,20 @@ export function TopProductsChart({ data }: { data: ProductDataPoint[] }) {
         layout="vertical"
         margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          stroke="#f0f0f0"
+          horizontal={false}
+        />
+
         <XAxis
           type="number"
           tick={{ fontSize: 12, fill: '#6b7280' }}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`}
+          tickFormatter={(v) => `₦${(Number(v) / 1000).toFixed(0)}k`}
         />
+
         <YAxis
           type="category"
           dataKey="name"
@@ -130,12 +185,42 @@ export function TopProductsChart({ data }: { data: ProductDataPoint[] }) {
           tickLine={false}
           width={120}
         />
+
         <Tooltip
-          formatter={(value: number) => [`₦${Number(value).toLocaleString()}`, 'Revenue']}
-          contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }}
+          formatter={(value) => [
+            `₦${Number(value).toLocaleString()}`,
+            'Revenue',
+          ]}
+          contentStyle={{
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+          }}
         />
-        <Bar dataKey="revenue" fill="#1a1208" radius={[0, 4, 4, 0]} />
+
+        <Bar
+          dataKey="revenue"
+          fill="#1a1208"
+          radius={[0, 4, 4, 0]}
+        />
       </BarChart>
     </ResponsiveContainer>
   )
+}
+
+// ── Dashboard Wrapper Component ──────────────────────────────────────────────
+
+export function DashboardCharts(props: DashboardChartsProps) {
+  switch (props.type) {
+    case 'revenue':
+      return <RevenueChart data={props.data} />
+
+    case 'donut':
+      return <OrderStatusChart data={props.data} />
+
+    case 'bar':
+      return <TopProductsChart data={props.data} />
+
+    default:
+      return null
+  }
 }

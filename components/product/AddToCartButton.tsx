@@ -1,79 +1,83 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useCart, useCartItemCount } from "@/hooks/useCart";
-import { Button } from "@/components/ui/Button";
-import { ShoppingBag } from "lucide-react";
-import { toast } from "@/components/ui/Toast";
+import { useState } from 'react'
+import { useCart } from '@/hooks/useCart'
+import { ShoppingCart, Check, Minus, Plus } from 'lucide-react'
+import { toast } from '@/components/ui/Toast'
 
-interface ProductProp {
-  id: string;
-  name: string;
-  slug: string;
-  price: number;
-  compareAtPrice?: number | null;
-  sku: string;
-  quantity: number;
-  images: any[];
-  category?: { name: string } | null;
+interface Product {
+  id: string
+  name: string
+  slug: string
+  price: number
+  compareAtPrice?: number | null
+  quantity: number
+  images?: any[]
+  category?: { name: string } | null
+  sku?: string
 }
 
 interface AddToCartButtonProps {
-  product: ProductProp;
-  quantity?: number;
-  variant?: "default" | "outline" | "ghost";
-  className?: string;
+  product: Product
+  className?: string
 }
 
-export function AddToCartButton({
-  product,
-  quantity = 1,
-  variant = "default",
-  className,
-}: AddToCartButtonProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const { addItem } = useCart();
-  const itemCount = useCartItemCount();
+export function AddToCartButton({ product, className = '' }: AddToCartButtonProps) {
+  const { addItem } = useCart()
+  const [qty, setQty] = useState(1)
+  const [added, setAdded] = useState(false)
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleAdd = () => {
+    if (product.quantity === 0) return
+    addItem({ ...product, price: Number(product.price), images: product.images || [], category: product.category || null }, qty)
+    setAdded(true)
+    toast.success(`${product.name} added to cart!`)
+    setTimeout(() => setAdded(false), 2000)
+  }
 
-    setIsLoading(true);
-
-    try {
-      // Ensure price is a number
-      const productToAdd = {
-        ...product,
-        price: Number(product.price),
-      };
-
-      addItem(productToAdd, quantity);
-      toast.success(`${product.name} added to cart!`);
-
-      // Log for debugging
-      console.log("Cart updated. New count:", itemCount + quantity);
-    } catch (error) {
-      toast.error("Failed to add item to cart");
-      console.error("Add to cart error:", error);
-    } finally {
-      // Small delay to show loading state
-      setTimeout(() => setIsLoading(false), 300);
-    }
-  };
-
-  const isOutOfStock = product.quantity === 0;
+  const outOfStock = product.quantity === 0
 
   return (
-    <Button
-      onClick={handleAddToCart}
-      disabled={isOutOfStock || isLoading}
-      loading={isLoading}
-      variant={variant}
-      className={className}
-    >
-      <ShoppingBag className="mr-2 h-4 w-4" />
-      {isOutOfStock ? "Out of Stock" : "Add to Cart"}
-    </Button>
-  );
+    <div className={`space-y-3 ${className}`}>
+      {/* Quantity selector */}
+      {!outOfStock && (
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Qty</span>
+          <div className="flex items-center border border-gray-200">
+            <button onClick={() => setQty(q => Math.max(1, q - 1))}
+              className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-[#C9A84C] transition-colors">
+              <Minus className="h-3.5 w-3.5" />
+            </button>
+            <span className="w-12 text-center font-semibold text-sm">{qty}</span>
+            <button onClick={() => setQty(q => Math.min(product.quantity, q + 1))}
+              className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-[#C9A84C] transition-colors">
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <span className="text-xs text-gray-400">{product.quantity} available</span>
+        </div>
+      )}
+
+      {/* Add to cart */}
+      <button
+        onClick={handleAdd}
+        disabled={outOfStock || added}
+        className={`w-full flex items-center justify-center gap-3 py-4 font-bold text-sm transition-all duration-300 ${
+          outOfStock
+            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            : added
+            ? 'bg-green-600 text-white'
+            : 'bg-[#111008] hover:bg-[#C9A84C] text-white hover:text-[#111008]'
+        }`}
+      >
+        {outOfStock ? (
+          'Out of Stock'
+        ) : added ? (
+          <><Check className="h-4 w-4" />Added to Cart</>
+        ) : (
+          <><ShoppingCart className="h-4 w-4" />Add to Cart</>
+        )}
+      </button>
+    </div>
+  )
 }

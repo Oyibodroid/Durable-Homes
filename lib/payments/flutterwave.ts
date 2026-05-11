@@ -1,15 +1,28 @@
-import { env } from '@/lib/env';
+// lib/payments/flutterwave.ts
 
-export async function verifyFlutterwaveWebhook(body: string, signature: string) {
-  // Flutterwave sends a secret hash you defined in your dashboard
-  const secretHash = env.FLUTTERWAVE_SECRET_KEY;
+export async function initializeFlutterwavePayment({ email, amount, reference, metadata }: any) {
+  const response = await fetch('https://api.flutterwave.com/v3/payments', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tx_ref: reference,
+      amount: amount, // Flutterwave takes Naira directly (no need to multiply by 100)
+      currency: 'NGN',
+      redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/verify/flutterwave`,
+      customer: {
+        email: email,
+      },
+      meta: metadata,
+      customizations: {
+        title: "Durable Homes",
+        logo: "/images/DurableHomesLogo.png",
+      },
+    }),
+  });
 
-  if (!signature || signature !== secretHash) {
-    throw new Error('Invalid Flutterwave signature');
-  }
-
-  const event = JSON.parse(body);
-  // Logic for 'charge.completed'
-  
-  return { received: true };
+  const data = await response.json();
+  return data;
 }

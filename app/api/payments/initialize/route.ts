@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { initializePaystackPayment, generatePaystackReference } from '@/lib/payments/paystack'
+import { initializeFlutterwavePayment } from '@/lib/payments/flutterwave'
+
 
 export async function POST(request: Request) {
   try {
@@ -51,8 +53,7 @@ export async function POST(request: Request) {
           reference,
         })
 
-      case 'flutterwave':
-        // Implement Flutterwave
+
         break
 
       case 'stripe':
