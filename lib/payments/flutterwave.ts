@@ -33,15 +33,37 @@ export async function initializeFlutterwavePayment({
   return response.json()
 }
 
-export async function verifyFlutterwaveWebhook(
+export function verifyFlutterwaveWebhook(
   payload: string,
-  signature: string
-) {
+  flwSignature: string | null
+): boolean {
+  // Use the SECRET_HASH provided by Flutterwave dashboard
   const secretHash = process.env.FLUTTERWAVE_SECRET_HASH
 
   if (!secretHash) {
-    throw new Error('FLUTTERWAVE_SECRET_HASH is missing')
+    throw new Error('FLUTTERWAVE_SECRET_HASH is missing from environment variables')
   }
 
-  return signature === process.env.FLUTTERWAVE_SECRET_HASH
+  // 1. If the signature is completely missing, the request is invalid.
+  if (!flwSignature) {
+    return false;
+  }
+
+  // 2. Generate the local hash using the raw payload body and your secret hash key.
+  const localHash = crypto
+    .createHmac('sha256', secretHash)
+    .update(payload)
+    .digest('hex');
+
+  // 3. Securely compare the received signature with your local hash.
+  // Use crypto.timingSafeEqual to prevent timing attacks.
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(flwSignature, 'hex'),
+      Buffer.from(localHash, 'hex')
+    );
+  } catch (err) {
+    // If Buffer creation fails (invalid length, etc.), comparison fails.
+    return false;
+  }
 }
