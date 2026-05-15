@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { verifyPaystackPayment as verifyPaystackWebhook } from '@/lib/payments/paystack';
