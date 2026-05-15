@@ -1,35 +1,55 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { orderSchema } from "@/lib/validations/order";
 import { auth } from "@/lib/auth";
 import { generateOrderNumber } from "@/lib/utils";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST: Create a New Order (Supports both Logged-In Users and Guests)
+// ─────────────────────────────────────────────────────────────────────────────
 export async function POST(request: Request) {
   try {
     const session = await auth();
     const json = await request.json();
+    
+    // Log incoming client payload to easily debug structural issues in Vercel
+    console.log("Incoming Checkout Payload:", JSON.stringify(json, null, 2));
+
+    // Validate incoming data matching your Zod structural requirements
     const body = orderSchema.parse(json);
     const orderNumber = generateOrderNumber();
 
+    // Assign the profile ID if logged in, otherwise set explicitly to null for guest checkouts
+    const targetUserId = session?.user?.id || null;
+
     const order = await prisma.$transaction(async (tx) => {
+      // 1. Inventory Stock Audit
       for (const item of body.items) {
         const product = await tx.product.findUnique({
           where: { id: item.productId },
           select: { id: true, name: true, sku: true, quantity: true },
         });
-        if (!product) throw new Error(`Product not found: ${item.productId}`);
-        if (product.quantity < item.quantity)
-          throw new Error(`Insufficient stock for ${product.name}`);
+        
+        if (!product) {
+          throw new Error(`Product not found: ${item.productId}`);
+        }
+        if (product.quantity < item.quantity) {
+          throw new Error(`Insufficient stock available for ${product.name}`);
+        }
       }
 
+      // 2. Generate Shipping Address Record
       const shippingAddr = body.shippingAddress;
       const shippingAddress = await tx.address.create({
         data: {
-          userId: session?.user?.id ?? "guest",
+          userId: targetUserId,
           type: "shipping",
           firstName: shippingAddr.firstName,
           lastName: shippingAddr.lastName,
-          addressLine1: shippingAddr.address,
+          // Fallback support if frontend passes 'addressLine1' instead of 'address'
+          addressLine1: shippingAddr.address || (shippingAddr as any).addressLine1,
           addressLine2: null,
           city: shippingAddr.city,
           state: shippingAddr.state,
@@ -39,14 +59,15 @@ export async function POST(request: Request) {
         },
       });
 
+      // 3. Generate Billing Address Record (Fallback to shipping if omitted)
       const billingAddr = body.billingAddress ?? body.shippingAddress;
       const billingAddress = await tx.address.create({
         data: {
-          userId: session?.user?.id ?? "guest",
+          userId: targetUserId,
           type: "billing",
           firstName: billingAddr.firstName,
           lastName: billingAddr.lastName,
-          addressLine1: billingAddr.address,
+          addressLine1: billingAddr.address || (billingAddr as any).addressLine1,
           addressLine2: null,
           city: billingAddr.city,
           state: billingAddr.state,
@@ -56,6 +77,7 @@ export async function POST(request: Request) {
         },
       });
 
+      // 4. Update and Decrement Stock Allocations
       for (const item of body.items) {
         await tx.product.update({
           where: { id: item.productId },
@@ -63,6 +85,7 @@ export async function POST(request: Request) {
         });
       }
 
+      // Fetch specific product metadata to safely attach naming strings to order historical records
       const productIds = body.items.map((i) => i.productId);
       const products = await tx.product.findMany({
         where: { id: { in: productIds } },
@@ -70,11 +93,12 @@ export async function POST(request: Request) {
       });
       const productMap = new Map(products.map((p) => [p.id, p]));
 
+      // 5. Save Core Order Object Tree 
       return await tx.order.create({
         data: {
           orderNumber,
-          userId: session?.user?.id ?? null,
-          guestEmail: !session ? shippingAddr.email : null,
+          userId: targetUserId,
+          guestEmail: !session ? shippingAddr.email : null, // Saves guest tracking contact detail
           status: "PENDING",
           paymentStatus: "PENDING",
           subtotal: body.subtotal,
@@ -103,23 +127,33 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(order);
-  } catch (error) {
-    console.error("Order creation error:", error);
-    if (error instanceof Error)
-      return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error: any) {
+    console.error("CRITICAL ORDER FAULT DETAIL:", error);
+    
+    // Explicit return structure for structural schema compilation errors
+    if (error?.name === "ZodError") {
+      return NextResponse.json(
+        { error: "Validation failure", details: error.issues }, 
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to create order" },
-      { status: 500 }
+      { error: error?.message || "Failed to finalize order creation" },
+      { status: 400 }
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET: Fetch Paginated Order History (Requires Authentication)
+// ─────────────────────────────────────────────────────────────────────────────
 export async function GET(request: Request) {
   try {
     const session = await auth();
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized access denied" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -127,12 +161,16 @@ export async function GET(request: Request) {
     const limit = Number(searchParams.get("limit")) || 10;
     const status = searchParams.get("status");
     const skip = (page - 1) * limit;
+    
     const where: any = {};
 
+    // Standard profiles can only view their own orders; Admin profiles view global pools
     if (session.user.role !== "ADMIN") {
       where.userId = session.user.id;
     }
-    if (status) where.status = status;
+    if (status) {
+      where.status = status;
+    }
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
@@ -152,9 +190,9 @@ export async function GET(request: Request) {
       totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
-    console.error("Orders API error:", error);
+    console.error("Orders Query API Failure Error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch orders" },
+      { error: "Failed to fetch order context ledger logs" },
       { status: 500 }
     );
   }
