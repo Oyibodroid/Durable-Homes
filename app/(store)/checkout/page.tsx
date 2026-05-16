@@ -307,7 +307,7 @@ export default function CheckoutPage() {
                       className={`border-2 p-5 mb-4 cursor-pointer transition-all ${paymentMethod === "paystack" ? "border-[#C9A84C] bg-[#C9A84C]/5" : "border-gray-200 hover:border-gray-300"}`}
                     >
                       <div className="flex items-center gap-3">
-                        <Image src="/images/Paystack_Logo.png" alt="Paystack" width={50} height={50} className="object-contain" />
+                        <Image src="/images/Paystack_Logo.png" alt="Paystack" width={100} height={100} className="object-contain" />
                         <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${paymentMethod === "paystack" ? "border-[#C9A84C]" : "border-gray-400"}`}>
                           {paymentMethod === "paystack" && <div className="w-2 h-2 rounded-full bg-[#C9A84C]" />}
                         </div>
@@ -324,7 +324,7 @@ export default function CheckoutPage() {
                       className={`border-2 p-5 mb-6 cursor-pointer transition-all ${paymentMethod === "flutterwave" ? "border-[#C9A84C] bg-[#C9A84C]/5" : "border-gray-200 hover:border-gray-300"}`}
                     >
                       <div className="flex items-center gap-3">
-                        <Image src="/images/Flutterwave_Logo.png" alt="Flutterwave" width={50} height={50} className="object-contain" />
+                        <Image src="/images/Flutterwave_Logo.png" alt="Flutterwave" width={100} height={100} className="object-contain" />
                         <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${paymentMethod === "flutterwave" ? "border-[#C9A84C]" : "border-gray-400"}`}>
                           {paymentMethod === "flutterwave" && <div className="w-2 h-2 rounded-full bg-[#C9A84C]" />}
                         </div>
