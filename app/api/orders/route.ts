@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const body = orderSchema.parse(json);
     const orderNumber = generateOrderNumber();
 
-    // Assign the profile ID if logged in, otherwise set explicitly to undefined for guest checkouts
+    // If logged in, get string ID. If guest, explicitly pass undefined so Prisma omits it.
     const targetUserId = session?.user?.id ?? undefined;
 
     const order = await prisma.$transaction(async (tx) => {
@@ -44,14 +44,12 @@ export async function POST(request: Request) {
       const shippingAddr = body.shippingAddress;
       const shippingAddress = await tx.address.create({
         data: {
-          // Conditionally spreads the relation only if a logged-in user is present
+          // Only link the relation if the user is authenticated
           ...(targetUserId ? { user: { connect: { id: targetUserId } } } : {}),
           type: "shipping",
           firstName: shippingAddr.firstName,
           lastName: shippingAddr.lastName,
-          // Fallback support if frontend passes 'addressLine1' instead of 'address'
-          addressLine1:
-            shippingAddr.address || (shippingAddr as any).addressLine1,
+          addressLine1: shippingAddr.address || (shippingAddr as any).addressLine1,
           addressLine2: undefined,
           city: shippingAddr.city,
           state: shippingAddr.state,
@@ -65,13 +63,11 @@ export async function POST(request: Request) {
       const billingAddr = body.billingAddress ?? body.shippingAddress;
       const billingAddress = await tx.address.create({
         data: {
-          // Conditionally spreads the relation only if a logged-in user is present
           ...(targetUserId ? { user: { connect: { id: targetUserId } } } : {}),
           type: "billing",
           firstName: billingAddr.firstName,
           lastName: billingAddr.lastName,
-          addressLine1:
-            billingAddr.address || (billingAddr as any).addressLine1,
+          addressLine1: billingAddr.address || (billingAddr as any).addressLine1,
           addressLine2: undefined,
           city: billingAddr.city,
           state: billingAddr.state,
@@ -101,8 +97,8 @@ export async function POST(request: Request) {
       return await tx.order.create({
         data: {
           orderNumber,
-          userId: targetUserId,
-          guestEmail: !session ? (shippingAddr.email ?? undefined) : undefined, // Saves guest tracking contact detail safely
+          userId: targetUserId, // Will map elegantly to NULL in DB if undefined
+          guestEmail: !session ? (shippingAddr.email ?? undefined) : undefined,
           status: "PENDING",
           paymentStatus: "PENDING",
           subtotal: body.subtotal,
