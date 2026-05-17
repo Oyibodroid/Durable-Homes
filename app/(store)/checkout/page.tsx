@@ -13,11 +13,13 @@ import {
   Truck,
   CreditCard,
   ArrowLeft,
+  MapPin,
+  Check,
 } from "lucide-react";
 import { toast } from "@/components/ui/Toast";
 
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Nunito:wght@300;400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght=500;600&family=Nunito:wght=300;400;500;600;700&display=swap');
   .font-display{font-family:'Cormorant Garamond',serif;}
   .hex-bg{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill='%23C9A84C' fill-opacity='0.055'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5z'/%3E%3C/g%3E%3C/svg%3E");}
   .field{width:100%;border:1.5px solid #e5e4e0;padding:11px 14px;font-size:14px;font-family:'Nunito',sans-serif;outline:none;transition:border-color 0.2s;background:white;color:#111;}
@@ -37,6 +39,20 @@ interface BillingData {
   city: string;
   state: string;
   country: string;
+}
+
+interface SavedAddress {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  country: string;
+  isDefault: boolean;
+  type?: string;
 }
 
 const NIGERIAN_STATES = [
@@ -59,6 +75,9 @@ export default function CheckoutPage() {
   const [mounted, setMounted] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentGateway>("paystack");
   
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+
   const [settings, setSettings] = useState({
     shippingFreeThreshold: 100000,
     shippingBaseRate: 5000,
@@ -77,6 +96,7 @@ export default function CheckoutPage() {
     country: "Nigeria",
   });
 
+  // Fetch baseline configuration metrics
   useEffect(() => {
     setMounted(true);
     fetch("/api/settings/public")
@@ -85,9 +105,25 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, []);
 
+  // Sync auth profile updates & fetch address register entries
   useEffect(() => {
     if (session?.user?.email) {
       setBilling((b) => ({ ...b, email: session.user!.email! }));
+      
+      // Fetch dynamic saved entries for verified sessions
+      fetch("/api/account/addresses")
+        .then((res) => res.json())
+        .then((data: SavedAddress[]) => {
+          if (Array.isArray(data)) {
+            setSavedAddresses(data);
+            // Autofill with default configuration selection if populated
+            const defaultAddr = data.find((a) => a.isDefault);
+            if (defaultAddr) {
+              selectSavedAddress(defaultAddr);
+            }
+          }
+        })
+        .catch((err) => console.error("Failed fetching user context addresses:", err));
     }
   }, [session]);
 
@@ -96,6 +132,20 @@ export default function CheckoutPage() {
   }, [mounted, items.length, router]);
 
   if (!mounted || items.length === 0) return null;
+
+  const selectSavedAddress = (addr: SavedAddress) => {
+    setSelectedAddressId(addr.id);
+    setBilling({
+      firstName: addr.firstName,
+      lastName: addr.lastName,
+      email: session?.user?.email || billing.email,
+      phone: addr.phone || "",
+      address: addr.addressLine2 ? `${addr.addressLine1}, ${addr.addressLine2}` : addr.addressLine1,
+      city: addr.city,
+      state: NIGERIAN_STATES.includes(addr.state) ? addr.state : "",
+      country: addr.country || "Nigeria",
+    });
+  };
 
   const shipping = subtotal >= settings.shippingFreeThreshold ? 0 : settings.shippingBaseRate;
   const tax = settings.taxEnabled ? subtotal * (settings.taxRate / 100) : 0;
@@ -142,7 +192,6 @@ export default function CheckoutPage() {
       const data = await orderRes.json();
 
       if (!orderRes.ok) {
-        console.error("Validation/Order Target Fault:", data.details || data.error);
         throw new Error(data.error || "Order generation failed");
       }
 
@@ -166,14 +215,12 @@ export default function CheckoutPage() {
       });
 
       const paymentData = await payRes.json();
-      // Flutterwave typically uses 'data.link', Paystack uses 'authorization_url'
       const redirectUrl = paymentData.authorization_url || paymentData.data?.link || paymentData.redirectUrl;
 
       if (!redirectUrl) {
         throw new Error("Could not extract a valid checkout route link from payment endpoint.");
       }
 
-      // Redirect client to processing portal interface
       window.location.href = redirectUrl;
     } catch (err: any) {
       console.error("Execution Checkout Exception:", err);
@@ -233,52 +280,94 @@ export default function CheckoutPage() {
             <div className="lg:col-span-2">
               {/* Billing View Block */}
               {step === "billing" && (
-                <div className="bg-white border border-gray-100 p-7">
-                  <h2 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                    <Package className="h-4 w-4 text-[#C9A84C]" /> Billing & Delivery Details
-                  </h2>
-                  <form onSubmit={handleBillingSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">First Name *</label>
-                        <input className="field" placeholder="John" required value={billing.firstName} onChange={(e) => setBilling(b => ({ ...b, firstName: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Last Name *</label>
-                        <input className="field" placeholder="Doe" required value={billing.lastName} onChange={(e) => setBilling(b => ({ ...b, lastName: e.target.value }))} />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email *</label>
-                        <input className="field" type="email" placeholder="you@example.com" required value={billing.email} onChange={(e) => setBilling(b => ({ ...b, email: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone *</label>
-                        <input className="field" type="tel" placeholder="+234 000 000 0000" required value={billing.phone} onChange={(e) => setBilling(b => ({ ...b, phone: e.target.value }))} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Delivery Address *</label>
-                      <input className="field" placeholder="Street address" required value={billing.address} onChange={(e) => setBilling(b => ({ ...b, address: e.target.value }))} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">City *</label>
-                        <input className="field" placeholder="Lagos" required value={billing.city} onChange={(e) => setBilling(b => ({ ...b, city: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">State *</label>
-                        <select className="field" required value={billing.state} onChange={(e) => setBilling(b => ({ ...b, state: e.target.value }))}>
-                          <option value="">Select state</option>
-                          {NIGERIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
+                <div className="space-y-6">
+                  {/* Saved Address Injection Segment */}
+                  {session && savedAddresses.length > 0 && (
+                    <div className="bg-white border border-gray-100 p-6">
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-[#C9A84C]" /> Ship to a Saved Destination
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {savedAddresses.map((addr) => (
+                          <div
+                            key={addr.id}
+                            onClick={() => selectSavedAddress(addr)}
+                            className={`p-4 border cursor-pointer relative transition-all flex flex-col justify-between ${
+                              selectedAddressId === addr.id
+                                ? "border-[#C9A84C] bg-[#C9A84C]/5"
+                                : "border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {addr.firstName} {addr.lastName}
+                                </p>
+                                {selectedAddressId === addr.id && (
+                                  <Check className="h-4 w-4 text-[#C9A84C]" />
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-600 line-clamp-2">{addr.addressLine1}</p>
+                              <p className="text-xs text-gray-400">{addr.city}, {addr.state}</p>
+                            </div>
+                            {addr.isDefault && (
+                              <span className="text-[9px] uppercase font-bold tracking-wider text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded self-start mt-2">
+                                Default
+                              </span>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <button type="submit" className="w-full bg-[#111008] hover:bg-[#C9A84C] text-white hover:text-[#111008] font-bold py-4 transition-all duration-300 flex items-center justify-center gap-3 mt-2">
-                      Continue to Payment <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </form>
+                  )}
+
+                  <div className="bg-white border border-gray-100 p-7">
+                    <h2 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                      <Package className="h-4 w-4 text-[#C9A84C]" /> Delivery Contact & Location
+                    </h2>
+                    <form onSubmit={handleBillingSubmit} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">First Name *</label>
+                          <input className="field" placeholder="John" required value={billing.firstName} onChange={(e) => setBilling(b => ({ ...b, firstName: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Last Name *</label>
+                          <input className="field" placeholder="Doe" required value={billing.lastName} onChange={(e) => setBilling(b => ({ ...b, lastName: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email *</label>
+                          <input className="field" type="email" placeholder="you@example.com" required value={billing.email} onChange={(e) => setBilling(b => ({ ...b, email: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phone *</label>
+                          <input className="field" type="tel" placeholder="+234 000 000 0000" required value={billing.phone} onChange={(e) => setBilling(b => ({ ...b, phone: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Delivery Address *</label>
+                        <input className="field" placeholder="Street address" required value={billing.address} onChange={(e) => setBilling(b => ({ ...b, address: e.target.value }))} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">City *</label>
+                          <input className="field" placeholder="Lagos" required value={billing.city} onChange={(e) => setBilling(b => ({ ...b, city: e.target.value }))} />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">State *</label>
+                          <select className="field" required value={billing.state} onChange={(e) => setBilling(b => ({ ...b, state: e.target.value }))}>
+                            <option value="">Select state</option>
+                            {NIGERIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <button type="submit" className="w-full bg-[#111008] hover:bg-[#C9A84C] text-white hover:text-[#111008] font-bold py-4 transition-all duration-300 flex items-center justify-center gap-3 mt-2">
+                        Continue to Payment <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </form>
+                  </div>
                 </div>
               )}
 
@@ -286,7 +375,7 @@ export default function CheckoutPage() {
               {step === "payment" && (
                 <div className="space-y-4">
                   <button onClick={() => setStep("billing")} className="flex items-center gap-2 text-sm text-gray-500 hover:text-[#C9A84C] transition-colors mb-2">
-                    <ArrowLeft className="h-4 w-4" /> Edit billing details
+                    <ArrowLeft className="h-4 w-4" /> Edit delivery details
                   </button>
 
                   <div className="bg-white border border-gray-100 p-5">
