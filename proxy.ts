@@ -12,9 +12,7 @@ function addSecurityHeaders(response: NextResponse) {
     "Content-Security-Policy",
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.paystack.com https://*.flutterwave.com https://js.stripe.com; " +
-    // FIX: Added fonts.googleapis.com to style-src
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " + 
-    // FIX: Added fonts.gstatic.com to font-src
     "font-src 'self' data: https://fonts.gstatic.com; " + 
     "img-src 'self' data: https: blob:; " +
     "connect-src 'self' https://*.paystack.com https://*.flutterwave.com https://api.stripe.com;"
@@ -48,7 +46,8 @@ async function handleRateLimit(request: NextRequest) {
         },
       });
     }
-    return result;
+    // Return null if rate limit passes so execution continues naturally
+    return null; 
   } catch (error) {
     console.error("Rate limit error:", error);
     return null;
@@ -59,30 +58,36 @@ const PUBLIC_CHECKOUT_PATHS = ["/checkout/verify", "/checkout/success"];
 
 export default auth(async (req) => {
   const path = req.nextUrl.pathname;
+  const method = req.method; // Capture HTTP method to protect mutations
   const isLoggedIn = !!req.auth;
   const user = req.auth?.user;
 
-  // 1. ABSOLUTE EXEMPTIONS
-  // We must allow these to bypass EVERYTHING to avoid loops and Auth errors
+  // 1. RUN RATE LIMITER
+  const rateLimitResult = await handleRateLimit(req);
+  if (rateLimitResult instanceof NextResponse) {
+    return rateLimitResult; // Stop execution and return 429 response if blocked
+  }
+
+  // 2. ABSOLUTE EXEMPTIONS
   if (
     path.startsWith("/api/auth") ||
     path === "/api/settings/maintenance-status" ||
+    path.startsWith("/api/admin/settings") || // Added to protect settings updates
     path === "/maintenance" ||
     path.startsWith("/_next") ||
-    path.includes(".") // Skips all files with extensions (images, favicons, etc)
+    path.includes(".") 
   ) {
     return NextResponse.next();
   }
 
-  // 2. MAINTENANCE CHECK
-  // We exclude /admin so you can actually log in to turn maintenance mode OFF
-  if (!path.startsWith("/admin")) {
+  // 3. MAINTENANCE CHECK
+  // Fix: Only evaluate page layouts (GET requests). Skip APIs and Admin mutations.
+  if (!path.startsWith("/admin") && !path.startsWith("/api") && method === "GET") {
     try {
-      // Fetching the status from your Admin Dashboard setting
       const maintenanceResponse = await fetch(
         new URL("/api/settings/maintenance-status", req.url),
         {
-          next: { revalidate: 0 }, // Ensure we don't cache "true" forever
+          next: { revalidate: 0 }, 
         },
       );
 
@@ -93,13 +98,11 @@ export default auth(async (req) => {
         }
       }
     } catch (error) {
-      // If the check fails, we default to letting the user through
-      // so the site doesn't go down just because the settings API is slow
       console.error("Maintenance check failed:", error);
     }
   }
 
-  // 3. ROLE-BASED ACCESS (Admin & Account)
+  // 4. ROLE-BASED ACCESS (Admin & Account)
   if (path.startsWith("/admin")) {
     if (!isLoggedIn)
       return NextResponse.redirect(new URL("/auth/signin", req.url));
@@ -111,7 +114,7 @@ export default auth(async (req) => {
     return NextResponse.redirect(new URL("/auth/signin", req.url));
   }
 
-  // 4. FINAL RESPONSE
+  // 5. FINAL RESPONSE WITH HEADERS
   const response = NextResponse.next();
   return addSecurityHeaders(response);
 });
